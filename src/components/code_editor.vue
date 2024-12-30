@@ -11,93 +11,66 @@ const handleSubmit = () => {
   alert('Code submitted!');
 };
 
-// onMounted(() => {
-//   const code_editor_conatiner = document.getElementById('code-editor');
-//   if (!code_editor_conatiner) {
-//     console.error('Monaco Editor container not found!');
-//     return;
-//   }
+onMounted(() => {
+  const code_editor_conatiner = document.getElementById('code-editor');
+  const draw_editor_conatiner = document.getElementById('draw-editor');
+  const resizer = document.getElementById('resizer');
+  if (!code_editor_conatiner) {
+    console.error('Monaco Editor container not found!');
+    return;
+  }
 
-//   const code_editor = monaco.editor.create(code_editor_conatiner, {
-//     value: codeInput.value,
-//     language: 'cpp',
-//     theme: 'vs-dark',
-//     minimap: { enabled: false }, // 關閉右側 minimap
-//     automaticLayout: true, // 自動適配容器大小
-//   });
+  const code_editor = monaco.editor.create(code_editor_conatiner, {
+    value: codeInput.value,
+    language: 'cpp',
+    theme: 'vs',
+    minimap: { enabled: false }, // 關閉右側 minimap
+    automaticLayout: true, // 自動適配容器大小
+  });
 
-//   const draw_editor_conatiner = document.getElementById('draw-editor');
-//   if (!draw_editor_conatiner) {
-//     console.error('Monaco Editor container not found!');
-//     return;
-//   }
+  if (!draw_editor_conatiner) {
+    console.error('Monaco Editor container not found!');
+    return;
+  }
 
-//   const draw_editor = monaco.editor.create(draw_editor_conatiner, {
-//     value: drawInput.value,
-//     language: 'cpp',
-//     theme: 'vs-dark',
-//     minimap: { enabled: false }, // 關閉右側 minimap
-//     automaticLayout: true, // 自動適配容器大小
-//   });
+  const draw_editor = monaco.editor.create(draw_editor_conatiner, {
+    value: drawInput.value,
+    language: 'cpp',
+    theme: 'vs',
+    minimap: { enabled: false }, // 關閉右側 minimap
+    automaticLayout: true, // 自動適配容器大小
+  });
 
-//   code_editor.onDidChangeModelContent(() => {
-//     codeInput.value = code_editor.getValue();
-//   });
-//   draw_editor.onDidChangeModelContent(() => {
-//     drawInput.value = draw_editor.getValue();
-//   });
-// });
+  code_editor.onDidChangeModelContent(() => {
+    codeInput.value = code_editor.getValue();
+  });
+  draw_editor.onDidChangeModelContent(() => {
+    drawInput.value = draw_editor.getValue();
+  });
+
+});
 </script>
 
 <template>
-  <button class="submit-btn" @click="handleSubmit">Submit Code</button>
-  <div class="editor">
-    <div id="code-editor" class="code-editor"></div>
-    <div id="draw-editor" class="draw-editor"></div>
-  </div>
+  <div id="code-editor" class="editor"></div>
+  <div class="resizer" id="resizer"></div>
+  <div id="draw-editor" class="editor"></div>
 </template>
 
 <style>
-.editor{
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  height: 100%;
+#code-editor{
+  flex: 1;
+  box-sizing: border-box;
 }
 
-.code-editor {
-  width: 100%;
-  height: 300px;
-  padding: 20px 0 0;
-  border: 2px solid #ddd;
+#draw-editor{
+  flex: 1;
 }
 
-.submit-btn {
-  padding: 0.75rem 2rem;
-  font-size: 1rem;
-  background-color: #4e5a6e;
-  color: #f0f0f0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.1s;
+.resizer {
+  height: 2px;
+  background: #888;
+  cursor: row-resize;
+  position: relative;
 }
-
-.submit-btn:hover {
-  background-color: #3d485c;
-}
-
-.submit-btn:active {
-  transform: scale(0.95);
-}
-
-.draw-editor{
-  width: 100%;
-  height: 200px;
-  padding: 20px 0 0;
-  border: 2px solid #ddd;
-}
-/* .monaco-editor{
-  border: 1px solid #ddd;
-} */
 </style>
