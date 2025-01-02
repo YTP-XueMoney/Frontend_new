@@ -9,10 +9,10 @@ import headerBar from './components/headerBar.vue'
   <headerBar/>
   <div class="main">
     <div class="left">
-      <code_editor />
+      <code_editor/>
     </div>
     <div class="right">
-      <canva />
+      <canva/>
     </div>
   </div>
 </template>
