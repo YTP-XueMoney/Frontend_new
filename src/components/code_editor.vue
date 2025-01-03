@@ -1,15 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import * as monaco from 'monaco-editor';
 import 'monaco-editor/min/vs/editor/editor.main.css';
 
 const codeInput = ref(''); // 初始化編輯器內容
 const drawInput = ref(''); // 初始化編輯器內容
-
-const handleSubmit = () => {
-  console.log('Submitted Code:', codeInput.value);
-  alert('Code submitted!');
-};
+const emits = defineEmits(['drawinput']);
 
 onMounted(() => {
   const code_editor_conatiner = document.getElementById('code-editor');
@@ -48,6 +44,10 @@ onMounted(() => {
     drawInput.value = draw_editor.getValue();
   });
 
+});
+
+watch(drawInput, (input) => {
+  emits('drawinput', input);
 });
 </script>
 
