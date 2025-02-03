@@ -1,15 +1,20 @@
 <script setup>
 import * as d3 from "d3";
-import { onMounted, watch, watchEffect } from "vue";
+import { onMounted, watchEffect } from "vue";
 const props = defineProps(['drawinput']);
 
 const Graph = {
+  direct: false,
   index:{
     a:['b'],
-    b:[]
+    b:[],
+    c:['a','d'],
+    d:['b'],
+    e:['d','a'],
   },
   arr:{
-    a:['c','d']
+    a:['c','d'],
+    b:['e','f','g']
   }
 };
 
@@ -39,7 +44,6 @@ const parseCode = (input) => {
 
 const drawGraph = (containerId, graph) => {
   // 狀態變數：追蹤 arrNodes 是否可見
-  let arrNodesVisible = true;
   document.getElementById(containerId).innerHTML = '';
   const width = document.getElementById(containerId).clientWidth;
   const height = document.getElementById(containerId).clientHeight;
@@ -48,6 +52,23 @@ const drawGraph = (containerId, graph) => {
     .append("svg")
     .attr("width", "100%")
     .attr("height", "100%");
+
+  if (graph.direct) {
+    console.log('direct');
+    svg.append("defs").selectAll("marker")
+      .data(["arrow"]) // 箭頭標記的 ID
+      .enter().append("marker")
+      .attr("id", (d) => d)
+      .attr("viewBox", "0 -5 10 10") // 箭頭的視圖範圍
+      .attr("refX", 25) // 箭頭的位置
+      .attr("refY", 0)
+      .attr("markerWidth", 6) // 箭頭的寬度
+      .attr("markerHeight", 6) // 箭頭的高度
+      .attr("orient", "auto") // 自動旋轉
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5") // 箭頭的形狀
+      .attr("fill", "#aaa"); // 箭頭的顏色
+  }
 
   // 處理 index 數據
   const indexNodes = Object.keys(graph.index).map((id) => ({ id, x: Math.random() * width, y: Math.random() * height }));
@@ -62,7 +83,8 @@ const drawGraph = (containerId, graph) => {
       x: 0, // 初始位置，稍後根據 a 的位置計算
       y: 0,
       parent: source, // 記錄父節點
-      offset: (i + 1) * 50 // 距離父節點的偏移量
+      offset: (i + 1) * 50, // 距離父節點的偏移量
+      visible: true // 初始狀態為可見
     }))
   );
 
@@ -71,7 +93,7 @@ const drawGraph = (containerId, graph) => {
 
   // 創建物理模擬（僅對 index 節點生效）
   const simulation = d3.forceSimulation(indexNodes)
-    .force("link", d3.forceLink(indexLinks).id((d) => d.id).distance(100).strength(1))
+    .force("link", d3.forceLink(indexLinks).id((d) => d.id).distance(150).strength(0.05))
     .force("charge", d3.forceManyBody().strength(-1))
     .on("tick", ticked);
 
@@ -81,7 +103,8 @@ const drawGraph = (containerId, graph) => {
     .enter()
     .append("line")
     .attr("stroke", "#aaa")
-    .attr("stroke-width", 2);
+    .attr("stroke-width", 2)
+    .attr("marker-end", graph.direct ? "url(#arrow)" : null); // 如果是無向圖，則不添加箭頭
 
   // 繪製節點
   const node = svg.selectAll(".node")
@@ -89,7 +112,7 @@ const drawGraph = (containerId, graph) => {
     .enter()
     .append("circle")
     .attr("r", 20)
-    .attr("fill", "#fff") // arr 節點用黃色標記
+    .attr("fill", "#fff")
     .attr("stroke", "#000")
     .attr("stroke-width", 2)
     .attr("class", (d) => (d.parent ? "arrnode" : "indexnode"))
@@ -159,19 +182,21 @@ const drawGraph = (containerId, graph) => {
       .attr("y", (d) => d.y);
   }
 
-  // **綁定雙擊事件 (dblclick)**
-  node.on("dblclick", (event, d) => {
-    if (!d.parent) {
-      // 切換 arrNodes 的可見性
-      arrNodesVisible = !arrNodesVisible;
-      
-      // 透過 visibility 屬性控制 arrNodes 的顯示與隱藏
-      node.filter((n) => n.parent)
-        .attr("visibility", arrNodesVisible ? "visible" : "hidden");
+  node.filter((d) => !d.parent).on("click", (event, d) => {
+    console.log('dbclick');
+    // 切換 c 和 d 的可見性
+    const children = arrNodes.filter((arrNode) => arrNode.parent === d.id);
 
-      label.filter((n) => n.parent)
-        .attr("visibility", arrNodesVisible ? "visible" : "hidden");
-    }
+    // 切換子節點的可見性
+    children.forEach((child) => {
+      child.visible = !child.visible;
+    });
+
+    // 更新子節點的顯示狀態
+    node.filter((n) => n.parent==d.id)
+      .attr("display", (n) => (n.visible ? "block" : "none"));
+    label.filter((n) => n.parent==d.id)
+      .attr("display", (n) => (n.visible ? "block" : "none"));
   });
 };
 
@@ -206,7 +231,11 @@ svg text {
   user-select: none;
 }
 
-.indexnode{
-  cursor: pointer;
+.indexnode:hover{
+  cursor: grab;
+}
+
+.indexnode:active{
+  cursor: grabbing;
 }
 </style>
