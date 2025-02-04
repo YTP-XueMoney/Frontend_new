@@ -4,17 +4,18 @@ import { onMounted, watchEffect } from "vue";
 const props = defineProps(['drawinput']);
 
 const Graph = {
-  direct: false,
-  index:{
-    a:['b'],
-    b:[],
-    c:['a','d'],
-    d:['b'],
-    e:['d','a'],
+  direct: true,
+  shape: 'circle',
+  index: {
+    1: ['2'],
+    2: [],
+    3: ['1', '4'],
+    4: ['2'],
+    5: ['4', '1'],
   },
-  arr:{
-    a:['c','d'],
-    b:['e','f','g']
+  arr: { 
+    1: ['6', '4'],
+    2: ['4', '1', '2']
   }
 };
 
@@ -42,8 +43,8 @@ const parseCode = (input) => {
   return graph;
 };
 
+//繪圖
 const drawGraph = (containerId, graph) => {
-  // 狀態變數：追蹤 arrNodes 是否可見
   document.getElementById(containerId).innerHTML = '';
   const width = document.getElementById(containerId).clientWidth;
   const height = document.getElementById(containerId).clientHeight;
@@ -60,7 +61,13 @@ const drawGraph = (containerId, graph) => {
       .enter().append("marker")
       .attr("id", (d) => d)
       .attr("viewBox", "0 -5 10 10") // 箭頭的視圖範圍
-      .attr("refX", 25) // 箭頭的位置
+      .attr("refX", (d) => {
+        // 根據 shape 調整箭頭的位置
+        if (graph.shape === "circle") return 25;
+        else if (graph.shape === "rectangle") return 30;
+        else if (graph.shape === "square") return 25;
+        return 25;
+      })
       .attr("refY", 0)
       .attr("markerWidth", 6) // 箭頭的寬度
       .attr("markerHeight", 6) // 箭頭的高度
@@ -80,7 +87,7 @@ const drawGraph = (containerId, graph) => {
   const arrNodes = Object.keys(graph.arr).flatMap((source) =>
     graph.arr[source].map((target, i) => ({
       id: target,
-      x: 0, // 初始位置，稍後根據 a 的位置計算
+      x: 0, // 初始位置
       y: 0,
       parent: source, // 記錄父節點
       offset: (i + 1) * 50, // 距離父節點的偏移量
@@ -94,7 +101,7 @@ const drawGraph = (containerId, graph) => {
   // 創建物理模擬（僅對 index 節點生效）
   const simulation = d3.forceSimulation(indexNodes)
     .force("link", d3.forceLink(indexLinks).id((d) => d.id).distance(150).strength(0.05))
-    .force("charge", d3.forceManyBody().strength(-1))
+    .force("charge", d3.forceManyBody().strength(-100))
     .on("tick", ticked);
 
   // 繪製連接線（僅 index 的連接線）
@@ -110,7 +117,18 @@ const drawGraph = (containerId, graph) => {
   const node = svg.selectAll(".node")
     .data(nodes)
     .enter()
-    .append("circle")
+    .append((d) => {
+      // 根據 shape 變數創建不同形狀的節點
+      if (graph.shape === "rectangle") {
+        return document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      }
+      else if (graph.shape === "square") {
+        return document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      }
+      else {
+        return document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      }
+    })
     .attr("r", 20)
     .attr("fill", "#fff")
     .attr("stroke", "#000")
@@ -133,6 +151,19 @@ const drawGraph = (containerId, graph) => {
           d.fy = null;
         })
     );
+
+  // 根據 shape 變數設置節點的屬性
+  if (graph.shape === "circle") {
+    node.attr("r", 20);
+  }
+  else if (graph.shape === "rectangle") {
+    node.attr("width", 50)
+      .attr("height", 30);
+  }
+  else if (graph.shape === "square") {
+    node.attr("width", 40)
+      .attr("height", 40);
+  }
 
   // 繪製節點標籤
   const label = svg.selectAll(".label")
@@ -157,9 +188,18 @@ const drawGraph = (containerId, graph) => {
       .attr("y2", (d) => d.target.y);
 
     // 更新 index 節點的位置
-    node
-      .attr("cx", (d) => d.x)
-      .attr("cy", (d) => d.y);
+    if (graph.shape === "circle") {
+      node.attr("cx", (d) => d.x)
+        .attr("cy", (d) => d.y);
+    }
+    else if (graph.shape === "rectangle") {
+      node.attr("x", (d) => d.x - 25)
+        .attr("y", (d) => d.y - 15);
+    }
+    else if (graph.shape === "square") {
+      node.attr("x", (d) => d.x - 20)
+        .attr("y", (d) => d.y - 20);
+    }
 
     // 更新 arr 節點的位置（根據父節點的位置計算）
     arrNodes.forEach((d) => {
@@ -171,10 +211,21 @@ const drawGraph = (containerId, graph) => {
     });
 
     // 更新 arr 節點的顯示位置
-    node
-      .filter((d) => d.parent)
-      .attr("cx", (d) => d.x)
-      .attr("cy", (d) => d.y);
+    if (graph.shape === "circle") {
+      node.filter((d) => d.parent)
+        .attr("cx", (d) => d.x)
+        .attr("cy", (d) => d.y);
+    }
+    else if (graph.shape === "rectangle") {
+      node.filter((d) => d.parent)
+        .attr("x", (d) => d.x - 25)
+        .attr("y", (d) => d.y - 15);
+    }
+    else if (graph.shape === "square") {
+      node.filter((d) => d.parent)
+        .attr("x", (d) => d.x - 20)
+        .attr("y", (d) => d.y - 20);
+    }
 
     // 更新所有標籤的位置
     label
@@ -193,9 +244,9 @@ const drawGraph = (containerId, graph) => {
     });
 
     // 更新子節點的顯示狀態
-    node.filter((n) => n.parent==d.id)
+    node.filter((n) => n.parent == d.id)
       .attr("display", (n) => (n.visible ? "block" : "none"));
-    label.filter((n) => n.parent==d.id)
+    label.filter((n) => n.parent == d.id)
       .attr("display", (n) => (n.visible ? "block" : "none"));
   });
 };
@@ -231,11 +282,11 @@ svg text {
   user-select: none;
 }
 
-.indexnode:hover{
+.indexnode:hover {
   cursor: grab;
 }
 
-.indexnode:active{
+.indexnode:active {
   cursor: grabbing;
 }
 </style>
