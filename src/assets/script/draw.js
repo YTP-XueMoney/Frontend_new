@@ -74,6 +74,7 @@ function ticked() {
 
 export default {
   drawGraph: (containerId, graph) => {
+    document.getElementById(containerId).innerHTML = '';
     svg.width = document.getElementById(containerId).clientWidth;
     svg.height = document.getElementById(containerId).clientHeight;
 
@@ -227,13 +228,13 @@ export default {
   // 更新圖形資料
   updateGraph: (graph) => {
     // 更新節點和連接線資料
-    indexNodes = Object.keys(graph.index).map((id) => ({ id, x: Math.random() * svg.width, y: Math.random() * svg.height }));
-    links = Object.entries(graph.index).flatMap(([source, targets]) =>
+    let newindexNodes = Object.keys(graph.index).map((id) => ({ id, x: Math.random() * svg.width, y: Math.random() * svg.height }));
+    let newlinks = Object.entries(graph.index).flatMap(([source, targets]) =>
       targets.map((target) => ({ source, target }))
     );
 
     // 處理 arr 數據
-    arrNodes = Object.keys(graph.arr).flatMap((source) =>
+    let newarrNodes = Object.keys(graph.arr).flatMap((source) =>
       graph.arr[source].map((target, i) => ({
         id: target,
         x: 0, // 初始位置，稍後根據父節點的位置計算
@@ -245,18 +246,75 @@ export default {
     );
 
     // 合併所有節點
-    nodes = [...indexNodes, ...arrNodes];
+    let newnodes = [...newindexNodes, ...newarrNodes];
 
-    // 更新物理模擬的資料
-    simulation.nodes(nodes);
-    simulation.force("link").links(links);
+    console.log(nodes);
+    console.log(links);
 
     // 重新綁定資料到圖形
-    link.data(links);
-    node.data(nodes);
-    label.data(nodes);
+    link.data(newlinks)
+    .enter()
+    .append("line")
+    .attr("stroke", "#aaa")
+    .attr("stroke-width", 2)
+    .attr("marker-end", graph.direct ? "url(#arrow)" : null);
+
+    node.data(newnodes)
+    .enter()
+    .append((d) => {
+      // 根據 shape 變數創建不同形狀的節點
+      if (graph.shape === "circle") {
+        return document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      } else if (graph.shape === "rectangle") {
+        return document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      } else if (graph.shape === "square") {
+        return document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      } else {
+        return document.createElementNS("http://www.w3.org/2000/svg", "circle"); // 默認為圓形
+      }
+    })
+    .attr("class", "node")
+    .attr("fill", (d) => (d.parent ? "#ffcc00" : "#fff")) // arr 節點用黃色標記
+    .attr("stroke", "#000")
+    .attr("stroke-width", 2)
+    .call(
+      d3.drag()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        })
+    );
+
+    label.data(newnodes)
+    .enter()
+    .append("text")
+    .attr("text-anchor", "middle")
+    .attr("dy", ".35em")
+    .text((d) => d.id)
+    .attr("fill", "#000")
+    .attr("font-size", "16px")
+    .attr("font-family", "Noto Sans TC")
+    .attr("font-weight", "500");
+
+    // 更新物理模擬的資料
+    simulation.nodes(newindexNodes);
+    simulation.force("link").links(newlinks);
+
 
     // 重新啟動模擬
     simulation.restart();
+  },
+  change: () => {
+    node.filter((d) => d.id == '1').attr("fill", "#bbcc00")
   }
 }

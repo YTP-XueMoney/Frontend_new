@@ -7,7 +7,7 @@ import parseCode from "@/assets/script/parseCode";
 const props = defineProps(['drawinput']);
 
 let Graph = {
-  direct: true,
+  direct: false,
   shape: 'circle', 
   index: {
     1: ['2'],
@@ -25,14 +25,14 @@ onMounted(() => {
   console.log(input);
   // const graph = parseCode(input);
   draw.drawGraph("graph", Graph);
-  watchEffect(() => {
-    const input = props.drawinput;
-    // console.log(input);
-    const graph = parseCode(input);
-    Graph.index[test++] = ['1'];
-    console.log(Graph);
-    draw.updateGraph(Graph);
-  })
+  // watchEffect(() => {
+  //   const input = props.drawinput;
+  //   // console.log(input);
+  //   const graph = parseCode(input);
+  //   Graph.index[test++] = ['1'];
+  //   console.log(Graph);
+  //   draw.drawGraph("graph", Graph);
+  // })
 });
 
 </script>

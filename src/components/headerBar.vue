@@ -1,4 +1,8 @@
 <script setup>
+import draw from '@/assets/script/draw';
+import { defineEmits } from 'vue';
+
+const emit = defineEmits(['run']);
 </script>
 
 <template>
@@ -6,6 +10,7 @@
     <h1>算法漫步</h1>
     <nav>
         <ul>
+            <li><button @click="emit('run')" class="btn">run</button></li>
             <li><i class="fa-solid fa-gear"></i></li>
         </ul>
     </nav>
@@ -25,5 +30,21 @@
     font-family: "Noto Sans TC", serif;
     font-weight: 600;
 
+}
+.header nav ul{
+    display: flex;
+    align-items: center;
+}
+.header nav ul li{
+    margin-left: 10px;
+}
+.btn{
+    font-size: 20px;
+    background: #fff;
+    border: 1px solid #000;
+}
+
+.btn:hover{
+    background-color: #ddd;
 }
 </style>

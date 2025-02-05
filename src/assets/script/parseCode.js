@@ -21,3 +21,29 @@ export default (input) => {
   });
   return graph;
 }
+
+class Runcode{
+  output = '';
+  input = '';
+  constructor(code, input) {
+    this.code = code;
+    this.input = input;
+    this.output = '';
+  }
+  modifyCode(s){
+    this.code = s;
+  }
+
+  modifyinput(s){
+    this.input = s;
+  }
+
+  run(){
+    eval(this.code);
+    console.log(this.input);
+    this.output = this.input + 'qq';
+    console.log('output: ' + this.output);
+  }
+}
+
+export const coderun = new Runcode('', '');

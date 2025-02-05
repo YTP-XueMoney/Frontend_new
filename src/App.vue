@@ -4,23 +4,23 @@ import code_editor from './components/code_editor.vue';
 import canva from './components/canva.vue';
 import headerBar from './components/headerBar.vue';
 
-const code = ref('');
+const runcode = ref('');
 
-const handelDrawinput = (drawinput) => {
-  code.value = drawinput;
-  console.log(code.value);
+const handelrun = () => {
+  console.log('run!');
+  runcode.value.coderun.run();
 };
 
 </script>
 
 <template>
-  <headerBar/>
+  <headerBar @run="handelrun"/>
   <div class="main">
     <div class="left">
-      <code_editor @drawinput="handelDrawinput"/>
+      <code_editor ref="runcode"/>
     </div>
     <div class="right">
-      <canva :drawinput="code"/>
+      <canva/>
     </div>
   </div>
 </template>
