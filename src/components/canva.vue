@@ -1,37 +1,37 @@
 <script setup>
 import { onMounted, watchEffect } from "vue";
 import drawGraph from "@/assets/script/drawGraph";
+import draw from "@/assets/script/draw";
 import parseCode from "@/assets/script/parseCode";
 
 const props = defineProps(['drawinput']);
 
-const Graph = {
+let Graph = {
   direct: true,
   shape: 'circle', 
   index: {
     1: ['2'],
-    2: [],
-    3: ['1', '4'],
-    4: ['2'],
-    5: ['4', '1'],
+    2: ['3'],
+    3: ['1']
   },
   arr: { 
-    1: ['6', '4'],
-    2: ['4', '1', '2']
+    1: ['0', 'a'],
+    2: ['b']
   }
 };
-
+let test = 4;
 onMounted(() => {
   const input = props.drawinput;
   console.log(input);
   // const graph = parseCode(input);
-  drawGraph("graph", Graph);
+  draw.drawGraph("graph", Graph);
   watchEffect(() => {
     const input = props.drawinput;
     // console.log(input);
     const graph = parseCode(input);
+    Graph.index[test++] = ['1'];
     console.log(Graph);
-    drawGraph("graph", Graph);
+    draw.updateGraph(Graph);
   })
 });
 
