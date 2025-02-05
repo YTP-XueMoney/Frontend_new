@@ -28,6 +28,7 @@ class Runcode{
   }
 
   run(){
+    this.inputValue = inputInput.value;
     this.outputValue.value = '';
     eval(this.code);
     area1.value = 'output';
@@ -82,12 +83,6 @@ onMounted(() => {
   });
 
 });
-
-watch(inputInput, (input) => {
-  coderun.modifyinput(input);
-  console.log(coderun.outputValue)
-});
-
 watch(codeInput, (input) => {
   coderun.modifyCode(input);
 });
