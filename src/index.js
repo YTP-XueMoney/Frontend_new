@@ -31,11 +31,17 @@ window.onload = () => {
     theme: "vs-light",
     minimap: { enabled: false },
     automaticLayout: false,
+    lineNumbers: "off",        // 關閉行號
+    glyphMargin: false,        // 移除左側行數間距
+    folding: false,            // 移除程式碼折疊功能（避免留白）
+    lineDecorationsWidth: 5,   // 移除行裝飾欄位
+    lineNumbersMinChars: 0     // 確保行數欄位不佔空間
   });
 
   document.querySelector('#run').addEventListener('click', () => {
     let runcode = code_monaco.getValue();
     output_area.querySelector('#output-txt').innerHTML = '';
+    svg.innerHTML = '';
     eval(runcode);
     input_area.style.display = "none";
     output_area.style.display = "block";
