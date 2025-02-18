@@ -8,12 +8,19 @@ window.onload = () => {
   const output_area = document.getElementById("output-area");
   const input_btn = document.querySelector('#input-area-btn');
   const output_btn = document.querySelector('#output-area-btn');
+  let inputBuffer = [];
+  let currentIndex = 0;
 
   const input = () => {
-    return input_monaco.getValue();
+    if (currentIndex < inputBuffer.length) {
+      return inputBuffer[currentIndex++];
+    } 
+    else {
+      return null; // 如果沒有更多輸入，返回 null
+    }
   };
 
-  const output = (str) => {
+  const print = (str) => {
     output_area.querySelector('#output-txt').innerHTML += str;
   }
 
@@ -39,10 +46,21 @@ window.onload = () => {
   });
 
   document.querySelector('#run').addEventListener('click', () => {
-    let runcode = code_monaco.getValue();
+    const runcode = code_monaco.getValue();
     output_area.querySelector('#output-txt').innerHTML = '';
+
+    // 清空畫布
     svg.innerHTML = '';
+
+    // 更新inputBuffer
+    const inputValue = input_monaco.getValue();
+    inputBuffer = inputValue.split(/\s+/);
+    currentIndex = 0;
+
+    // 執行輸入的程式
     eval(runcode);
+
+    // 切換到output
     input_area.style.display = "none";
     output_area.style.display = "block";
     output_btn.classList.add("active-btn");
@@ -1188,7 +1206,7 @@ window.addEventListener("mouseup", function (event) {
   mouse.hold = false;
 });
 
-window.addEventListener("keydown", function (event) {
+/*window.addEventListener("keydown", function (event) {
   // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
   if (event.code === "Space" || event.key === " ") {
     console.log("空白鍵被按下！");
@@ -1202,7 +1220,7 @@ window.addEventListener("keydown", function (event) {
     // 防止預設行為，例如捲動頁面
     event.preventDefault();
   }
-});
+});*/
 
 // objUpdateList = [];
 
