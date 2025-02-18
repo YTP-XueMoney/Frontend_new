@@ -1,6 +1,12 @@
 import './style.css';
 import './reset.css';
 import * as monaco from "monaco-editor";
+import { rotateMatrix } from "./tools.js";
+let ani_lines=[];
+function isProxy(obj) {
+  if (typeof obj != "object") return false;
+  return obj.isProxy;
+}
 
 window.onload = () => {
   const code_editor = document.getElementById("code-editor");
@@ -40,6 +46,7 @@ window.onload = () => {
 
   document.querySelector('#run').addEventListener('click', () => {
     let runcode = code_monaco.getValue();
+    ani_lines=[]
     output_area.querySelector('#output-txt').innerHTML = '';
     svg.innerHTML = '';
     eval(runcode);
@@ -48,7 +55,26 @@ window.onload = () => {
     output_btn.classList.add("active-btn");
     input_btn.classList.remove("active-btn");
   });
-
+  document.querySelector('#show').addEventListener('click', () => {
+    console.log(ani_lines);
+  });
+  document.querySelector("#play").addEventListener("click", () => {
+    
+    let all_line=ani_lines.length;
+    async function executeNextLine() {
+      for(let i=0;i<all_line;i++){
+        console.log(`執行 ${i} , ${ani_lines[i]}`);
+        let code_to_run=ani_lines.slice(0, i+1).join("\n");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        document.getElementById("mySvg").innerHTML = "";
+        eval(code_to_run);
+      }
+      ani_lines=[]
+    }
+  
+    executeNextLine(); // 開始執行第一行
+    
+  });
   input_area.style.display = "block";
   output_area.style.display = "none"; // 預設隱藏 output-area
 
@@ -72,15 +98,24 @@ window.onload = () => {
 
 };
 
-function rotateMatrix(x = 0, y = 0, rad = 0, cx = 0, cy = 0) {
-  (x -= cx), (y -= cy);
-  var newX = x * Math.cos(rad) - y * Math.sin(rad);
-  var newY = x * Math.sin(rad) + y * Math.cos(rad);
-  (newX += cx), (newY += cy);
-  return {
-    x: newX,
-    y: newY,
-  };
+class Debugger {
+  constructor(codeLines) {
+      this.codeLines = codeLines;
+      this.currentLine = 0;
+  }
+
+  nextStep() {
+      if (this.currentLine >= this.codeLines.length) {
+          console.log("🎯 所有代碼執行完成！");
+          return;
+      }
+
+      let line = this.codeLines[this.currentLine];
+      console.log(`🛑 執行第 ${this.currentLine + 1} 行: ${line}`);
+      this.currentLine++;
+
+      eval(line);  // 執行該行代碼
+  }
 }
 
 // 取得 SVG 容器
@@ -109,37 +144,99 @@ let mouse = {
 };
 
 export function updateLoop(self) {
+  if ("$deleted" in self && self.$deleted) return;
   setTimeout(() => {
     self.update();
   }, frameT);
 }
+
+export function DelegationHandler(delegaionNames) {
+  return {
+    get(target, prop, receiver) {
+      //  can't find a better way to determine if an object is a proxy
+      //  there's node: util.types.isProxy but it's not available in browser
+      if (prop == "isProxy") return true;
+
+      if (prop in target) return Reflect.get(target, prop);
+      else {
+        for (let name of delegaionNames) {
+          let nextTarget = target[name];
+          if (isProxy(nextTarget) || prop in nextTarget) {
+            let result = Reflect.get(nextTarget, prop);
+            if (result != undefined) return result;
+          }
+        }
+        return undefined;
+      }
+    },
+    set(target, prop, value) {
+      if (prop in target) return Reflect.set(target, prop, value);
+      else {
+        for (let name of delegaionNames) {
+          if (
+            (isProxy(target[name]) || prop in target[name]) &&
+            Reflect.set(target[name], prop, value)
+          )
+            return true;
+        }
+        return false;
+      }
+    },
+  };
+}
+
+export function Delegation(target, delegaionNames) {
+  for (let prop of delegaionNames)
+    if (!(prop in target)) throw Error(`${prop} doesn't exist in ${target}`);
+  // else if (typeof target[prop] != "object")
+  //   throw Error(`${prop} in ${target} isn't an object`);
+  return new Proxy(target, DelegationHandler(delegaionNames));
+}
+
+// export function DelegationHandler(delegaionName) {
+//   return {
+//     get(target, prop, receiver) {
+//       // 如果 `prop` 存在於 Pointer 自身，返回它
+//       if (prop in target) return target[prop];
+//       // 否則將屬性存取轉發到 `val`
+//       return target[delegaionName][prop];
+//     },
+//     set(target, prop, value) {
+//       if (prop in target) target[prop] = value;
+//       else target[delegaionName][prop] = value;
+//       return true;
+//       //  idk why
+//     },
+//   };
+// }
 
 export class pointer {
   pointer_isPointer = true;
   _val;
   constructor(val = 0) {
     this._val = val;
-    return new Proxy(this, {
-      get(target, prop, receiver) {
-        // 如果 `prop` 存在於 Pointer 自身，返回它
-        if (prop in target) return target[prop];
-        // if (prop in target) return Reflect.get(target, prop, receiver);
-        // 否則將屬性存取轉發到 `val`
-        return target.val[prop];
-        // return Reflect.get(target.val, prop, receiver);
-      },
-    });
+    return Delegation(this, ["val"]);
   }
   valueOf() {
     return this.val;
   }
-  // if(_val)
   get val() {
-    if (this._val != null && this._val.pointer_isPointer) return this._val.val;
+    // if (this._val != null && this._val.pointer_isPointer) return this._val.val;
+    if (
+      this._val != null &&
+      (this._val.constructor.name == "pointer" ||
+        this._val.constructor.name == "refer")
+    )
+      return this._val.val;
     else return this._val;
   }
   set val(val) {
-    if (this._val.pointer_isPointer) this._val.val = val;
+    // if (this._val.pointer_isPointer) this._val.val = val;
+    if (
+      this._val.constructor.name == "pointer" ||
+      this._val.constructor.name == "refer"
+    )
+      this._val.val = val;
     else {
       if (val !== this) this._val = val;
       else {
@@ -151,6 +248,17 @@ export class pointer {
         );
       }
     }
+  }
+
+  [Symbol.toPrimitive](hint) {
+    if (hint === "number") {
+      // console.log(this.valueOf());
+      return this.valueOf();
+    }
+    if (hint === "string") {
+      return toString(this.valueOf());
+    }
+    return this.valueOf();
   }
 }
 
@@ -170,7 +278,7 @@ export class refer {
   set val(val) {
     //  nothing happen right now
     if (this.setFunc != null) this.setFunc(val);
-    else console.error("this refer has no set/reverse funuction");
+    // else console.error("this refer has no set/reverse funuction");
     // console.log("tried to change a refer val");
   }
   valueOf() {
@@ -221,6 +329,7 @@ let svg_ASA = svg_AttributeSetterArray;
 export class Coordinate2d {
   x = new pointer(0);
   y = new pointer(0);
+
   constructor(_x = 0, _y = 0) {
     this.x.val = _x;
     this.y.val = _y;
@@ -228,26 +337,32 @@ export class Coordinate2d {
   distance(other) {
     return Math.sqrt(
       Math.pow(this.x.val - other.x.val, 2) +
-      Math.pow(this.y.val - other.y.val, 2)
+        Math.pow(this.y.val - other.y.val, 2)
     );
   }
+
   dist(other) {
     return this.distance(other);
   }
+
   len() {
     return Math.sqrt(this.x.val * this.x.val + this.y.val * this.y.val);
   }
+
   static distance(a, b) {
     return Math.sqrt(
       Math.pow(a.x.val - b.x.val, 2) + Math.pow(a.y.val - b.y.val, 2)
     );
   }
+
   static dist(a, b) {
     return this.distance(a, b);
   }
+
   static len(a) {
     return a.x.val * a.x.val + a.y.val * a.y.val;
   }
+
   static unit(me) {
     var r = Math.sqrt(me.x.val * me.x.val + me.y.val * me.y.val);
     return new Coordinate2d(me.x.val / r, me.y.val / r);
@@ -501,6 +616,8 @@ export class obj_bound {
     let obj2 = this.obj2;
     let pos1 = obj1.pos;
     let pos2 = obj2.pos;
+    // console.log(obj1);
+    // console.log(obj2);
 
     let posVector = new Coordinate2d(pos2.x - pos1.x, pos2.y - pos1.y);
     let d = posVector.len();
@@ -542,13 +659,14 @@ export class svg_bridge {
     if (this._svgObj.val != null) svg.removeChild(this._svgObj.val);
     this._svgObj._val = val;
     if (this._svgObj.val != null) {
-      this._svgObj.val.obj = this;
+      // this._svgObj.val.obj = this;
       this.svgASA.svg = this.svgObj;
       svg.appendChild(this._svgObj.val);
     }
   }
   constructor(svgObj = null) {
     this.svgObj = svgObj;
+    return Delegation(this, ["svgObj"]);
     // return new Proxy(this, {
     //   get(target, prop) {
     //     if (prop in target) return target[prop];
@@ -558,10 +676,9 @@ export class svg_bridge {
   }
   svgASA = new svg_ASA();
   addAttribute(att, val) {
-    this[att] = val;
-    // change to this
-    // this.svgASA.append(new pointer(this.svgObj), att, val);
-    this.svgASA.append(this.svgObj, att, val);
+    Reflect.defineProperty(this, att, val);
+    // this[att] = val;
+    this.svgASA.append(new pointer(this.svgObj), att, val);
   }
   setAttribute(att, val) {
     this._svgObj.val.setAttribute(att, val);
@@ -580,7 +697,7 @@ export class svg_bridge {
 export class svg_hold {
   //  under svg_bridge
   svgBridge = new pointer(); // svg_bridge
-  curSvgObj;
+  curSvgObj = new pointer();
   holding = false;
   pos = new pointer();
   dX;
@@ -589,16 +706,31 @@ export class svg_hold {
 
   constructor(svgBridge, pos) {
     this.svgBridge._val = svgBridge;
-    this.curSvgObj = svgBridge.val.svgObj.val;
+    this.curSvgObj._val = svgBridge.svgObj;
     this.pos._val = pos;
-    this.curSvgObj.addEventListener(
-      "mousedown",
-      this.triggerFunction.bind(this)
-    );
+    // console.log(this.curSvgObj);
+    this.curSvgObj.val.addEventListener(
+        "mousedown",
+        this.triggerFunction.bind(this),
+      );
+    
+    //  idfk why this doesn't work
+    // this.curSvgObj.addEventListener(
+      //   "mousedown",
+      //   this.triggerFunction.bind(this),
+      // );
+
+    // alternative:
+    // let tmpF = this.curSvgObj.addEventListener;
+    // tmpF("mousedown", this.triggerFunction.bind(this));
+
+    // fix this if have time
+
     this.update();
   }
-  triggerFunction() {
+  triggerFunction(event) {
     if (this.$deleted) return;
+    event.preventDefault();
     this.holding = true;
     this.dX = this.svgBridge.getAttribute("cx") - mouse.x;
     this.dY = this.svgBridge.getAttribute("cy") - mouse.y;
@@ -608,12 +740,12 @@ export class svg_hold {
   }
   update() {
     if (this.svgBridge.val.svgObj.val !== this.curSvgObj) {
-      this.curSvgObj.removeEventListener(
+      this.curSvgObj.val.removeEventListener(
         "mousedown",
         this.triggerFunction.bind(this)
       );
-      this.curSvgObj = this.svgBridge.val.svgObj.val;
-      this.curSvgObj.addEventListener(
+      this.curSvgObj._val = this.svgBridge.svgObj.val;
+      this.curSvgObj.val.addEventListener(
         "mousedown",
         this.triggerFunction.bind(this)
       );
@@ -626,11 +758,11 @@ export class svg_hold {
         this.holding = false;
       }
     }
-    if (!this.$deleted) updateLoop(this);
+    updateLoop(this);
   }
   delete() {
     this.$deleted = true;
-    this.curSvgObj.removeEventListener(
+    this.curSvgObj.val.removeEventListener(
       "mousedown",
       this.triggerFunction.bind(this)
     );
@@ -638,6 +770,7 @@ export class svg_hold {
 }
 
 let svg_layerSortTrigger = false;
+
 export class svg_layer {
   svgObj; // svg_bridge
   _layer = new pointer(0);
@@ -709,6 +842,7 @@ export class pack_basic {
     this.holder = new svg_hold(this.svgBridge, this.pos);
     this.svgLayer = new svg_layer(this.svgBridge, new pointer(1));
     this.update();
+    return Delegation(this, ["svgBridge", "dot"]);
   }
   update() {
     this.svgBridge.update();
@@ -717,9 +851,19 @@ export class pack_basic {
 }
 
 export class pack_circle {
+  static objectRegistry = new WeakMap();
+  static nextId = 1;
+
+  get getObjectId() {
+    if (!pack_circle.objectRegistry.has(this)) {
+      pack_circle.objectRegistry.set(this, pack_circle.nextId++);
+    }
+    return "circle" + pack_circle.objectRegistry.get(this);
+  }
+  
   packBasic = new pack_basic(svgCircle.cloneNode());
-  dot = this.packBasic.dot;
-  pos = this.dot.pos;
+  // dot = this.packBasic.dot;
+  pos = this.packBasic.pos;
   r = new pointer();
   text = new pointer(null);
   packText = new pointer(
@@ -728,10 +872,14 @@ export class pack_circle {
   constructor(pos = { x: 0, y: 0 }, r = 20, text = "") {
     this.pos.x.val = pos.x;
     this.pos.y.val = pos.y;
+
     this.r.val = r;
     this.packBasic.svgBridge.addAttribute("r", new pointer(this.r));
     this.text._val = text;
     this.packText.packBasic.layer = this.packBasic.layer + 0.001;
+    ani_lines.push(`let ${this.getObjectId} = new pack_circle( { x: ${pos.x}, y: ${pos.y} }, ${r} , ${text} );`)
+    return Delegation(this, ["packBasic"]);
+    // return new Proxy(this, DelegationHandler("packBasic"));
   }
 }
 
@@ -742,6 +890,7 @@ export class pack_square {
   height = new pointer(20);
   rotate = new pointer(0);
   refer = new Proxy(this, refer);
+
   svgX = new pointer(
     new refer(
       function () {
@@ -771,49 +920,6 @@ export class pack_square {
     new pack_text(new pointer(this.text), this.pos.x, this.pos.y)
   );
 
-  // x = new Proxy(this, {
-  //   get(target, prop, receiver) {
-  //     return target.packBasic.pos.x[prop] - target.width / 2;
-  //   },
-  //   set(target, prop, val) {
-  //     target.packBasic.pos.x = new Proxy(
-  //       { val: val, width: target.width },
-  //       {
-  //         get(target, prop, receiver) {
-  //           return target.val - target.width / 2;
-  //         },
-  //         set(target, prop, val) {
-  //           target.val = val;
-  //         },
-  //       }
-  //     );
-  //   },
-  // });
-
-  // get x() {
-  //   return new pointer(this.packBasic.pos.x + this.width / 2);
-  // }
-  // set x(val) {
-  //   var x = this.packBasic.pos.x;
-  //   x.val = val - this.width / 2;
-  // }
-  // get y() {
-  //   return new pointer(this.packBasic.pos.y + this.height / 2);
-  // }
-  // set y(val) {
-  //   var y = this.packBasic.pos.y;
-  //   y.val = val - this.height / 2;
-  // }
-  // get pos() {
-  //   // return this;
-  //   // return new function () {
-  //   return { x: this.x, y: this.y };
-  //   // }.bind(this);
-  // }
-  // set pos(pos) {
-  //   this.x = pos.x;
-  //   this.y = pos.y;
-  // }
   get rotateTransform() {
     return new pointer(
       `rotate(${this.rotate.val} ${this.pos.x.val} ${this.pos.y.val})`
@@ -838,7 +944,12 @@ export class pack_square {
     );
     this.text._val = text;
     this.packText.packBasic.layer = this.packBasic.layer + 0.001;
-    this.update();
+    // this.update();
+    // console.log(this.packBasic.svgObj.val);
+    // console.log(this.packText.packBasic.svgObj);
+    // this.packBasic.svgObj.val.appendChild(this.packText.packBasic.svgObj.val);
+    return Delegation(this, ["packBasic"]);
+    // return new Proxy(this, DelegationHandler("packBasic"));
   }
   update() {
     // this.packBasic.svgObj.setAttribute("transform", this.rotateTransform.val);
@@ -877,11 +988,15 @@ export class pack_text {
     this.pos.x._val = x;
     this.pos.y._val = y;
     this.text._val = text;
-    this.packBasic.svgBridge.addAttribute("x", this.x);
-    this.packBasic.svgBridge.addAttribute("y", this.y);
+    // console.log(this.packBasic.svgBridge);
+    // console.log(isProxy(this.packBasic.svgBridge));
+    // console.log(this.packBasic);
+    // console.log(isProxy(this.packBasic));
+    this.packBasic.addAttribute("x", this.x);
+    this.packBasic.addAttribute("y", this.y);
     // this doesn't work :(
     // this.packBasic.svgBridge.addAttribute("textContent", this.text);
-    this.packBasic.svgBridge.addAttribute(
+    this.packBasic.addAttribute(
       "transform",
       new refer(
         function () {
@@ -892,6 +1007,7 @@ export class pack_text {
     this.packBasic.layer = 10;
     this.packBasic.holder.delete();
     this.update();
+    return Delegation(this, ["packBasic"]);
   }
   get rotateTransform() {
     return new pointer(
@@ -899,12 +1015,18 @@ export class pack_text {
     );
   }
   update() {
-    this.packBasic.svgBridge.svgObj.val.textContent = this.text.val;
+    this.packBasic.svgObj.textContent = this.text.val;
     updateLoop(this);
   }
 }
 
 export class pack_line {
+  get getObjectId() {
+    if (!pack_circle.objectRegistry.has(this)) {
+      pack_circle.objectRegistry.set(this, pack_circle.nextId++);
+    }
+    return "line" + pack_circle.objectRegistry.get(this);
+  }
   obj1 = new pointer();
   obj2 = new pointer();
   pos1 = new pointer();
@@ -923,6 +1045,10 @@ export class pack_line {
     this.svgObj.addAttribute("x2", new pointer(this.pos2.x));
     this.svgObj.addAttribute("y2", new pointer(this.pos2.y));
     this.svgLayer = new svg_layer(this.svgObj, new pointer(0));
+    // console.log(this.obj1._val);
+    // console.log(this.obj2._val);
+    ani_lines.push(`let ${this.getObjectId} = new pack_line( ${obj1.getObjectId} , ${obj2.getObjectId} ); `)
+    console.log("i see");
     this.bound = new obj_bound(this.obj1, this.obj2, 100, 150);
     this.update();
   }
@@ -951,8 +1077,22 @@ export class pack_array {
     this.gap._val = gap;
     this.rad._val = rad;
     this.update();
+    return Delegation(this, ["dot", "defaultArray"]);
   }
   containing = [];
+  defaultArray = new Proxy([], {
+    get: (target, prop, receiver) => {
+      if (prop == "isProxy") return true;
+      if (prop in target) return Reflect.get(target, prop, receiver);
+      if (!isNaN(Number(prop))) return Reflect.get(target, prop, receiver);
+      else return undefined;
+    },
+    set: (target, prop, value, receiver) => {
+      if (!isNaN(Number(prop))) {
+        return Reflect.set(target, prop, value, receiver);
+      } else return false;
+    },
+  });
   maxIndex = -2;
   posGetter(index) {
     let xy = rotateMatrix(
@@ -970,8 +1110,8 @@ export class pack_array {
     while (this.maxIndex < index) {
       this.maxIndex += 1;
       let newBox = new pack_square();
-      newBox.packBasic.svgObj = pack_array_svgBox.cloneNode();
-      newBox.packBasic.layer = 0.5;
+      newBox.svgObj = pack_array_svgBox.cloneNode();
+      newBox.layer = 0.5;
       newBox.height._val = this.gap;
       newBox.width._val = this.gap;
       newBox.rotate._val = new refer(
@@ -979,7 +1119,7 @@ export class pack_array {
           return (this.rad.val / Math.PI) * 180;
         }.bind(this)
       );
-      newBox.packBasic.holder.delete();
+      newBox.holder.delete();
       // newBox.packBasic.holder = new svg_hold(
       //   newBox.packBasic,
       //   newBox.packBasic.pos
@@ -1000,10 +1140,20 @@ export class pack_array {
       let coord = this.containing[i].coord;
       let index = this.containing[i].index;
       let newCoord = this.posGetter(index);
-      // console.log(newCoord);
       coord.x.val = newCoord.x.val;
       coord.y.val = newCoord.y.val;
     }
+    for (var i = 0; i < this.defaultArray.length; i++) {
+      if (typeof this.defaultArray[i] == "number")
+        this.defaultArray[i] = new pack_text(this.defaultArray[i]);
+      if (typeof this.defaultArray[i] != "object") continue;
+      let coord = this.defaultArray[i].pos;
+      let index = i;
+      let newCoord = this.posGetter(index);
+      coord.x.val = newCoord.x.val;
+      coord.y.val = newCoord.y.val;
+    }
+
     updateLoop(this);
   }
 }
@@ -1036,8 +1186,8 @@ export class pack_array {
   );
 
   // 設定 circle 的屬性
-  svgCircle.setAttribute("cx", 100); // 設定圓心的 X 座標為點擊位置
-  svgCircle.setAttribute("cy", 100); // 設定圓心的 Y 座標為點擊位置
+  svgCircle.setAttribute("cx", 1000); // 設定圓心的 X 座標為點擊位置
+  svgCircle.setAttribute("cy", 1000); // 設定圓心的 Y 座標為點擊位置
   svgCircle.setAttribute("r", "20"); // 設定圓形半徑
   svgCircle.setAttribute("fill", "white"); // 設定圓形顏色
   svgCircle.setAttribute("stroke", "black");
@@ -1106,12 +1256,43 @@ let myArray2 = new pack_array(
 );
 myArray2.append(c6.pos, 0);
 myArray2.append(c7.pos, 1);
+myArray[4] = 444;
+myArray[5] = 555;
+myArray[6] = new pack_circle();
+// console.log(myArray);
+let tmp = new pointer(c1);
 let l1 = new pack_line(c1, c5);
 
 let s1 = new pack_square();
 s1.text._val = "this is a square";
+// console.log(s1.svgObj.val.constructor.name);
+// console.log(s1.packText.svgObj.val);
+// console.log(s1.svgObj.appendChild);
+// s1.svgObj.appendChild(s1.packText.svgObj.val);
 
-let t1 = new pack_text();
+
+// let t1 = new pack_text();
+// t1.holder = new svg_hold(t1.svgBridge, t1.pos);
+// Reflect.defineProperty(t1, "hold", {
+//   value: new svg_hold(t1.svgBridge, t1.pos),
+//   writable: true,
+//   enumerable: true,
+//   configurable: true,
+// });
+// t1.holder = new svg_hold(t1.svgBridge, t1.pos);
+
+let c8 = new pack_square();
+c8.pos.x._val = new refer(
+  function () {
+    return mouse.x;
+  }.bind(this)
+);
+c8.pos.y._val = new refer(
+  function () {
+    return mouse.y;
+  }.bind(this)
+);
+c8.layer = 0;
 
 let m = new pack_circle();
 m.pos.x._val = new pointer(c2.pos.x);
@@ -1119,7 +1300,7 @@ m.pos.y._val = new pointer(c2.pos.y);
 m.pos._val = c2.pos;
 m.r.val = 25;
 m.packBasic.layer = 3;
-m.packBasic.svgBridge.setAttribute("fill", "none"); // 設定圓形顏色
+m.packBasic.svgBridge.setAttribute("fill", "none");
 m.packBasic.svgBridge.setAttribute("stroke", "red");
 m.packBasic.svgBridge.setAttribute("stroke-width", "4");
 
@@ -1194,7 +1375,6 @@ window.addEventListener("keydown", function (event) {
     console.log("空白鍵被按下！");
     s1.width.val += 1;
     myArray.rad._val += Math.PI / 45;
-    // myPoints.push(new pack_basic(svgCircle.cloneNode(), 301, 301));
     // let i = myPoints.length - 1;
     // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
     // myGravity.append(myPoints[i]);
@@ -1209,11 +1389,10 @@ window.addEventListener("keydown", function (event) {
 // setTimeout(sortByLayer, 100);
 sortByLayer();
 export function update() {
-  // console.log("c1");
-  // console.log(c1.pos);
-  // console.log("arr");
-  // console.log(myArray.pos);
   updateTime();
+
+  // myArray[5] = 5555;
+
   if (svg_layerSortTrigger) {
     sortByLayer();
     svg_layerSortTrigger = false;
@@ -1285,13 +1464,13 @@ export class pack_segTree {
         function (center) {
           return center.val;
         }.bind(this, center),
-        function (val) { }
+        function (val) {}
       ),
       new refer(
         function (depth) {
           return this.pos.y.val + depth * (this.sepDist + this.height);
         }.bind(this, depth),
-        function (val) { }
+        function (val) {}
       ),
       len,
       this.height,
@@ -1338,19 +1517,18 @@ export class pack_segTree {
   }
 }
 
-// let mySegTree = new pack_segTree(13, 600, 40);
+let mySegTree = new pack_segTree(13, 600, 40);
 
-// window.addEventListener("keydown", function (event) {
-//   // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
-//   if (event.code === "Space" || event.key === " ") {
-//     mySegTree.len._val += 3;
+window.addEventListener("keydown", function (event) {
+  // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
+  if (event.code === "Space" || event.key === " ") {
+    mySegTree.len._val += 3;
 
-//     // myPoints.push(new pack_basic(svgCircle.cloneNode(), 301, 301));
-//     // let i = myPoints.length - 1;
-//     // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
-//     // myGravity.append(myPoints[i]);
+    // let i = myPoints.length - 1;
+    // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
+    // myGravity.append(myPoints[i]);
 
-//     // 防止預設行為，例如捲動頁面
-//     event.preventDefault();
-//   }
-// });
+    // 防止預設行為，例如捲動頁面
+    event.preventDefault();
+  }
+});
