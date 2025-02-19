@@ -1,8 +1,11 @@
 # 算法漫步
-開發者：YTP-XueMoney(dumbledore96、hamster0717、Kevin110026)
+能夠靈活視覺化任意演算法的動畫平台
+![image](https://hackmd.io/_uploads/HkhEkm7cJl.png)
 
-## 架構
-- 編輯器: monaco editor
+開發者：YTP薛爛了(姚承希mahiro96、吳赫宥hamster0717、薛尹喆Kevin110026)
+[期末報告規劃hackmd](https://hackmd.io/@YTP-XueMoney/BkO-EZmqJe)
+[簡報](https://www.canva.com/design/DAGVC0tQQfE/p5q3bah2w10lJHzIWX0NwA/view?utm_content=DAGVC0tQQfE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hf8e3dbb968)
+[歷程檔案hackmd](https://hackmd.io/@YTP-XueMoney/rkqG1zJT0)
 
 ## 待辦清單
 - [x] UI介面-2024/12/30
@@ -10,7 +13,6 @@
 - [x] 節點圖繪製-2025/1/3
 - [x] 動畫功能-2025/2/10
 - [ ] 動態調整功能
-- [ ] AJAX前後端通訊
 
 ## 安裝與啟動
 1. 安裝[node.js](https://nodejs.org/zh-tw/download)

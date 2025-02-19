@@ -31,7 +31,7 @@ window.onload = () => {
   }
 
   const code_monaco = monaco.editor.create(code_editor, {
-    value: "output(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
+    value: "print(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
     language: "javascript",
     theme: "vs-light",
     minimap: { enabled: false },
