@@ -3,9 +3,9 @@
 ![image](https://hackmd.io/_uploads/HkhEkm7cJl.png)
 
 開發者：YTP薛爛了(姚承希mahiro96、吳赫宥hamster0717、薛尹喆Kevin110026)
-[期末報告規劃hackmd](https://hackmd.io/@YTP-XueMoney/BkO-EZmqJe)
-[簡報](https://www.canva.com/design/DAGVC0tQQfE/p5q3bah2w10lJHzIWX0NwA/view?utm_content=DAGVC0tQQfE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hf8e3dbb968)
-[歷程檔案hackmd](https://hackmd.io/@YTP-XueMoney/rkqG1zJT0)
+- [期末報告規劃](https://hackmd.io/@YTP-XueMoney/BkO-EZmqJe)
+- [簡報](https://www.canva.com/design/DAGVC0tQQfE/p5q3bah2w10lJHzIWX0NwA/view?utm_content=DAGVC0tQQfE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hf8e3dbb968)
+- [歷程檔案](https://hackmd.io/@YTP-XueMoney/rkqG1zJT0)
 
 ## 待辦清單
 - [x] UI介面-2024/12/30
