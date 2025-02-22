@@ -119,9 +119,10 @@ async function executeCode() {
 
 
 window.onload = () => {
+  
   const code_editor = document.getElementById("code-editor");
   const input_area = document.getElementById("input-area");
-  const output_area = document.getElementById("output-area");
+  window.output_area = document.getElementById("output-area");
   const input_btn = document.querySelector('#input-area-btn');
   const output_btn = document.querySelector('#output-area-btn');
   
@@ -153,7 +154,7 @@ window.onload = () => {
   document.querySelector('#run').addEventListener('click', () => {
     const runcode = window.code_monaco.getValue();
     ani_lines=[]
-    output_area.querySelector('#output-txt').innerHTML = '';
+    window.output_area.querySelector('#output-txt').innerHTML = '';
 
     // 清空畫布
     svg.innerHTML = '';
@@ -165,7 +166,7 @@ window.onload = () => {
 
     // 切換到output
     input_area.style.display = "none";
-    output_area.style.display = "block";
+    window.output_area.style.display = "block";
     output_btn.classList.add("active-btn");
     input_btn.classList.remove("active-btn");
   });
@@ -190,7 +191,7 @@ window.onload = () => {
     
   });
   input_area.style.display = "block";
-  output_area.style.display = "none"; // 預設隱藏 output-area
+  window.output_area.style.display = "none"; // 預設隱藏 output-area
 
   input_btn.classList.add("active-btn");
 
@@ -198,14 +199,14 @@ window.onload = () => {
 
   document.querySelector('#input-area-btn').addEventListener("click", () => {
     input_area.style.display = "block";
-    output_area.style.display = "none";
+    window.output_area.style.display = "none";
     input_btn.classList.add("active-btn");
     output_btn.classList.remove("active-btn");
   });
 
   document.querySelector('#output-area-btn').addEventListener("click", () => {
     input_area.style.display = "none";
-    output_area.style.display = "block";
+    window.output_area.style.display = "block";
     output_btn.classList.add("active-btn");
     input_btn.classList.remove("active-btn");
   });
