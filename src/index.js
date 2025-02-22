@@ -2,11 +2,121 @@ import './style.css';
 import './reset.css';
 import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
+let inputBuffer = [];
+let currentIndex = 0;
+const input = () => {
+  if (currentIndex < inputBuffer.length) {
+    return inputBuffer[currentIndex++];
+  } 
+  else {
+    return null; // 如果沒有更多輸入，返回 null
+  }
+};
+
+const print = (str) => {
+  output_area.querySelector('#output-txt').innerHTML += str;
+}
 let ani_lines=[];
 function isProxy(obj) {
   if (typeof obj != "object") return false;
   return obj.isProxy;
 }
+function GetPosX(obj) {
+  return obj.pos.x;
+}
+function GetPos1X(obj) {
+  return obj.pos1.x;
+}
+function GetPos1Y(obj) {
+  return obj.pos1.y;
+}
+function GetPos2X(obj) {
+  return obj.pos2.x;
+}
+function GetPos2Y(obj) {
+  return obj.pos2.y;
+}
+function GetPosY(obj) {
+  return obj.pos.y;
+}
+function wait(ms) {
+  
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function trackExecution(code) {
+  return code.split("\n").map((line, index) => {
+    let trimmedLine = line.trim();
+    if (trimmedLine === "" || trimmedLine.startsWith("//")) return line;
+    return `console.log("Executing line ${index + 1}");\n${line}`;
+  }).join("\n");
+}
+// 高亮当前执行的行
+// 存储 Monaco 高亮的装饰器
+// 存储 Monaco 高亮的装饰器
+
+
+function highlightLine(lineNumber) {
+  
+  if (!window.code_monaco) return; // 确保 Monaco Editor 存在
+  if (!window.decorations) {
+    window.decorations = window.code_monaco.createDecorationsCollection([]);
+  }
+  // 移除旧的高亮，并添加新的高亮
+  window.decorations.set([
+    {
+      range: new monaco.Range(lineNumber + 1, 1, lineNumber + 1, 1), // 高亮当前行
+      options: {
+        isWholeLine: true,
+        className: "myLineDecoration", // ✅ 使用行高亮样式
+      },
+    },
+  ]);
+}
+
+async function executeCode() {
+  console.log("hamster run code");
+
+  if (!window.code_monaco) {
+    console.error("Monaco Editor 未初始化！");
+    return;
+  }
+
+  // ✅ 从输入框读取输入数据
+  // 更新inputBuffer
+  const inputValue = window.input_monaco.getValue();
+  inputBuffer = inputValue.split(/\s+/);
+  currentIndex = 0;
+  let code = window.code_monaco.getValue(); // ✅ 获取 Monaco Editor 代码
+  if (!code) {
+    console.error("代码为空，无法执行！");
+    return;
+  }
+
+  let lines = [];
+
+  code.split("\n").forEach((line, index) => {
+    let trimmedLine = line.trim();
+    if (trimmedLine === "" || trimmedLine.startsWith("//")) return;
+
+    // ✅ 每一行代码执行前调用 `highlightLine(index)`
+    lines.push(`
+      highlightLine(${index});
+      console.log("Executing line ${index + 1}"); 
+    `);
+    lines.push(line);
+  });
+  console.log(lines.join("\n"));
+  let asyncCode = `(async () => { ${lines.join("\n")} })()`;
+
+  try {
+    await eval(asyncCode);
+  } catch (error) {
+    console.error("Error at line:", error.stack);
+  }
+}
+
+
 
 window.onload = () => {
   const code_editor = document.getElementById("code-editor");
@@ -14,31 +124,20 @@ window.onload = () => {
   const output_area = document.getElementById("output-area");
   const input_btn = document.querySelector('#input-area-btn');
   const output_btn = document.querySelector('#output-area-btn');
-  let inputBuffer = [];
-  let currentIndex = 0;
+  
+  
+  
+  
 
-  const input = () => {
-    if (currentIndex < inputBuffer.length) {
-      return inputBuffer[currentIndex++];
-    } 
-    else {
-      return null; // 如果沒有更多輸入，返回 null
-    }
-  };
-
-  const print = (str) => {
-    output_area.querySelector('#output-txt').innerHTML += str;
-  }
-
-  const code_monaco = monaco.editor.create(code_editor, {
+  window.code_monaco = monaco.editor.create(code_editor, {
     value: "output(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
     language: "javascript",
     theme: "vs-light",
     minimap: { enabled: false },
     automaticLayout: true,
   });
-
-  const input_monaco = monaco.editor.create(input_area, {
+  window.decorations = window.code_monaco.createDecorationsCollection([]);
+  window.input_monaco = monaco.editor.create(input_area, {
     value: "",
     language: "plaintext",
     theme: "vs-light",
@@ -52,20 +151,17 @@ window.onload = () => {
   });
 
   document.querySelector('#run').addEventListener('click', () => {
-    const runcode = code_monaco.getValue();
+    const runcode = window.code_monaco.getValue();
     ani_lines=[]
     output_area.querySelector('#output-txt').innerHTML = '';
 
     // 清空畫布
     svg.innerHTML = '';
 
-    // 更新inputBuffer
-    const inputValue = input_monaco.getValue();
-    inputBuffer = inputValue.split(/\s+/);
-    currentIndex = 0;
+    
 
     // 執行輸入的程式
-    eval(runcode);
+    executeCode(runcode);
 
     // 切換到output
     input_area.style.display = "none";
@@ -116,25 +212,6 @@ window.onload = () => {
 
 };
 
-class Debugger {
-  constructor(codeLines) {
-      this.codeLines = codeLines;
-      this.currentLine = 0;
-  }
-
-  nextStep() {
-      if (this.currentLine >= this.codeLines.length) {
-          console.log("🎯 所有代碼執行完成！");
-          return;
-      }
-
-      let line = this.codeLines[this.currentLine];
-      console.log(`🛑 執行第 ${this.currentLine + 1} 行: ${line}`);
-      this.currentLine++;
-
-      eval(line);  // 執行該行代碼
-  }
-}
 
 // 取得 SVG 容器
 var svg = document.getElementById("mySvg");
@@ -166,6 +243,16 @@ export function updateLoop(self) {
   setTimeout(() => {
     self.update();
   }, frameT);
+
+  // self = new WeakRef(self);
+
+  // setTimeout(() => {
+  //   if (!self.deref()) {
+  //     console.log("deleted");
+  //     return;
+  //   }
+  //   self.deref().update();
+  // }, frameT);
 }
 
 export function DelegationHandler(delegaionNames) {
@@ -383,6 +470,7 @@ export class Coordinate2d {
 
   static unit(me) {
     var r = Math.sqrt(me.x.val * me.x.val + me.y.val * me.y.val);
+    if (r == 0) return new Coordinate2d(1, 0);
     return new Coordinate2d(me.x.val / r, me.y.val / r);
   }
 }
@@ -618,6 +706,7 @@ export class obj_bound {
   minr = new pointer();
   maxr = new pointer();
   k = new pointer();
+  $deleted = false;
   constructor(obj1, obj2, minr = null, maxr = null, k = 1000) {
     this.obj1._val = obj1;
     this.obj2._val = obj2;
@@ -629,7 +718,12 @@ export class obj_bound {
     this.k._val = k;
     this.update();
   }
+  delete() {
+    this.$deleted = true;
+  }
   update() {
+    if (this.$deleted) return;
+
     let obj1 = this.obj1;
     let obj2 = this.obj2;
     let pos1 = obj1.pos;
@@ -670,6 +764,7 @@ export class obj_bound {
 
 export class svg_bridge {
   _svgObj = new pointer(null);
+  $deleted = false;
   get svgObj() {
     return this._svgObj;
   }
@@ -685,12 +780,6 @@ export class svg_bridge {
   constructor(svgObj = null) {
     this.svgObj = svgObj;
     return Delegation(this, ["svgObj"]);
-    // return new Proxy(this, {
-    //   get(target, prop) {
-    //     if (prop in target) return target[prop];
-    //     else return target.svgObj[prop];
-    //   },
-    // });
   }
   svgASA = new svg_ASA();
   addAttribute(att, val) {
@@ -707,7 +796,12 @@ export class svg_bridge {
   addEventListener(eventType, func) {
     this._svgObj.val.addEventListener(eventType, func);
   }
+  delete() {
+    this.$deleted = true;
+    this.svgObj = null;
+  }
   update() {
+    if (this.$deleted) return;
     this.svgASA.update();
   }
 }
@@ -728,15 +822,20 @@ export class svg_hold {
     this.pos._val = pos;
     // console.log(this.curSvgObj);
     this.curSvgObj.val.addEventListener(
-        "mousedown",
-        this.triggerFunction.bind(this),
-      );
-    
+      "mousedown",
+      this.triggerFunction.bind(this)
+    );
+
+    this.curSvgObj.val.addEventListener(
+      "mouseup",
+      this.releaseFunction.bind(this)
+    );
+
     //  idfk why this doesn't work
     // this.curSvgObj.addEventListener(
-      //   "mousedown",
-      //   this.triggerFunction.bind(this),
-      // );
+    //   "mousedown",
+    //   this.triggerFunction.bind(this),
+    // );
 
     // alternative:
     // let tmpF = this.curSvgObj.addEventListener;
@@ -752,23 +851,33 @@ export class svg_hold {
     this.holding = true;
     this.dX = this.svgBridge.getAttribute("cx") - mouse.x;
     this.dY = this.svgBridge.getAttribute("cy") - mouse.y;
-    svg.appendChild(this.svgBridge.svgObj.val);
-    // console.log(`dx: ${this.dX}, dy: ${this.dY}`);
-    // console.log(this.svgBridge);
+    // svg.appendChild(this.svgBridge.svgObj.val);
+  }
+  releaseFunction(event) {
+    event.preventDefault();
   }
   update() {
     if (this.svgBridge.val.svgObj.val !== this.curSvgObj) {
-      this.curSvgObj.val.removeEventListener(
-        "mousedown",
-        this.triggerFunction.bind(this)
-      );
+      if (this.curSvgObj.val != null) {
+        this.curSvgObj.val.removeEventListener(
+          "mousedown",
+          this.triggerFunction.bind(this)
+        );
+      }
       this.curSvgObj._val = this.svgBridge.svgObj.val;
-      this.curSvgObj.val.addEventListener(
-        "mousedown",
-        this.triggerFunction.bind(this)
-      );
+      if (this.curSvgObj.val != null) {
+        this.curSvgObj.val.addEventListener(
+          "mousedown",
+          this.triggerFunction.bind(this)
+        );
+      }
     }
     if (this.holding) {
+      // if (
+      //   this.pos.x.val != this.dX + mouse.x ||
+      //   this.pos.y.val != this.dY + mouse.y
+      // )
+      //   event.preventDefault();
       this.pos.x.val = this.dX + mouse.x;
       this.pos.y.val = this.dY + mouse.y;
       if (!mouse.hold) {
@@ -819,9 +928,18 @@ export class pack_basic {
   velocity = new pointer(this.dot.velocity);
   svgBridge;
   holder;
+  hide = new pointer(false);
+  fill = new pointer();
+  stroke = new pointer();
+  $fill = new pointer(this.fill);
+  $stroke = new pointer(this.stroke);
+  hover = new pointer();
+  $deleted = false;
 
   set svgObj(svgObj) {
     this.svgBridge.val.svgObj = svgObj;
+    this.fill._val = this.svgBridge.getAttribute("fill");
+    this.stroke._val = this.svgBridge.getAttribute("stroke");
   }
   get svgObj() {
     return this.svgBridge.svgObj;
@@ -855,49 +973,86 @@ export class pack_basic {
         }.bind(this)
       )
     );
-    // this.svgBridge.addAttribute("cx", new pointer(this.pos.x));
-    // this.svgBridge.addAttribute("cy", new pointer(this.pos.y));
+    this.svgBridge.addAttribute(
+      "visibility",
+      new refer(
+        function () {
+          if (this.hide.val) return "hidden";
+          else return "visible";
+        }.bind(this)
+      )
+    );
+    this.svgBridge.addEventListener(
+      "mouseenter",
+      function () {
+        this.hover._val = true;
+      }.bind(this)
+    );
+    this.svgBridge.addEventListener(
+      "mouseleave",
+      function () {
+        this.hover._val = false;
+      }.bind(this)
+    );
+
+    this.fill._val = this.svgBridge.getAttribute("fill");
+    this.stroke._val = this.svgBridge.getAttribute("stroke");
+    this.svgBridge.addAttribute("fill", this.$fill);
+    this.svgBridge.addAttribute("stroke", this.$stroke);
     this.holder = new svg_hold(this.svgBridge, this.pos);
     this.svgLayer = new svg_layer(this.svgBridge, new pointer(1));
     this.update();
     return Delegation(this, ["svgBridge", "dot"]);
   }
+
+  mark = new pointer(false);
+  markFill = new pointer("red");
+  markStroke = new pointer("black");
+  delete() {
+    this.$deleted = true;
+    this.svgBridge.delete();
+    this.holder.delete();
+  }
   update() {
+    if (this.$deleted) return;
+
+    if (this.mark.val) {
+      this.$fill._val = this.markFill;
+      this.$stroke._val = this.markStroke;
+    } else {
+      this.$fill._val = this.fill;
+      this.$stroke._val = this.stroke;
+    }
+
     this.svgBridge.update();
     updateLoop(this);
   }
 }
 
 export class pack_circle {
-  static objectRegistry = new WeakMap();
-  static nextId = 1;
-
-  get getObjectId() {
-    if (!pack_circle.objectRegistry.has(this)) {
-      pack_circle.objectRegistry.set(this, pack_circle.nextId++);
-    }
-    return "circle" + pack_circle.objectRegistry.get(this);
-  }
-  
   packBasic = new pack_basic(svgCircle.cloneNode());
-  // dot = this.packBasic.dot;
   pos = this.packBasic.pos;
   r = new pointer();
   text = new pointer(null);
   packText = new pointer(
     new pack_text(new pointer(this.text), this.pos.x, this.pos.y)
   );
+  $deleted = false;
   constructor(pos = { x: 0, y: 0 }, r = 20, text = "") {
     this.pos.x.val = pos.x;
     this.pos.y.val = pos.y;
-
     this.r.val = r;
     this.packBasic.svgBridge.addAttribute("r", new pointer(this.r));
     this.text._val = text;
     this.packText.packBasic.layer = this.packBasic.layer + 0.001;
-    ani_lines.push(`let ${this.getObjectId} = new pack_circle( { x: ${pos.x}, y: ${pos.y} }, ${r} , ${text} );`)
+    this.packText.hide._val = this.packBasic.hide;
     return Delegation(this, ["packBasic"]);
     // return new Proxy(this, DelegationHandler("packBasic"));
+  }
+  delete() {
+    this.$deleted = true;
+    this.packBasic.delete();
+    this.packText.delete();
   }
 }
 
@@ -908,6 +1063,7 @@ export class pack_square {
   height = new pointer(20);
   rotate = new pointer(0);
   refer = new Proxy(this, refer);
+  $deleted;
 
   svgX = new pointer(
     new refer(
@@ -969,10 +1125,10 @@ export class pack_square {
     return Delegation(this, ["packBasic"]);
     // return new Proxy(this, DelegationHandler("packBasic"));
   }
-  update() {
-    // this.packBasic.svgObj.setAttribute("transform", this.rotateTransform.val);
-    // this.rotate.val = (this.rotate + 1) % 360;
-    updateLoop(this);
+  delete() {
+    this.$deleted = true;
+    this.packBasic.delete();
+    this.packText.delete();
   }
 }
 
@@ -1000,6 +1156,7 @@ export class pack_text {
     )
   );
   text = new pointer("text");
+  $deleted = false;
 
   rotate = new pointer(0);
   constructor(text = "text", x = 120, y = 120) {
@@ -1024,6 +1181,8 @@ export class pack_text {
     );
     this.packBasic.layer = 10;
     this.packBasic.holder.delete();
+    this.packBasic.markFill._val = "brown";
+    this.packBasic.markStroke._val = "none";
     this.update();
     return Delegation(this, ["packBasic"]);
   }
@@ -1032,43 +1191,142 @@ export class pack_text {
       `rotate(${this.rotate.val} ${this.pos.x.val} ${this.pos.y.val})`
     );
   }
+  get val() {
+    return this.text.val;
+  }
+  set val(val) {
+    this.text.val = val;
+  }
+  get _val() {
+    return this.text._val;
+  }
+  set _val(val) {
+    this.text._val = val;
+  }
+  valueOf() {
+    return this.text.val;
+  }
+  delete() {
+    this.$deleted = true;
+    this.packBasic.delete();
+  }
   update() {
+    if (this.$deleted) return;
     this.packBasic.svgObj.textContent = this.text.val;
     updateLoop(this);
   }
 }
 
 export class pack_line {
-  get getObjectId() {
-    if (!pack_circle.objectRegistry.has(this)) {
-      pack_circle.objectRegistry.set(this, pack_circle.nextId++);
-    }
-    return "line" + pack_circle.objectRegistry.get(this);
-  }
+  packBasic = new pack_basic(svgLine.cloneNode());
   obj1 = new pointer();
   obj2 = new pointer();
   pos1 = new pointer();
   pos2 = new pointer();
   // svgASA = new svg_ASA();
-  svgObj = new pointer(new svg_bridge(svgLine.cloneNode()));
   bound;
+  packText = new pointer(
+    new pack_text(
+      "",
+      new refer(
+        function () {
+          return (this.pos1.x + this.pos2.x) / 2;
+        }.bind(this)
+      ),
+      new refer(
+        function () {
+          return (this.pos1.y + this.pos2.y) / 2;
+        }.bind(this)
+      )
+    )
+  );
+  $deleted;
+  arrow = new pointer(null);
 
-  constructor(obj1, obj2) {
+  constructor(obj1, obj2, noForce = false, arrow = false) {
     this.obj1._val = obj1;
     this.obj2._val = obj2;
     this.pos1._val = this.obj1.pos;
     this.pos2._val = this.obj2.pos;
-    this.svgObj.addAttribute("x1", new pointer(this.pos1.x));
-    this.svgObj.addAttribute("y1", new pointer(this.pos1.y));
-    this.svgObj.addAttribute("x2", new pointer(this.pos2.x));
-    this.svgObj.addAttribute("y2", new pointer(this.pos2.y));
-    this.svgLayer = new svg_layer(this.svgObj, new pointer(0));
-    // console.log(this.obj1._val);
-    // console.log(this.obj2._val);
-    ani_lines.push(`let ${this.getObjectId} = new pack_line( ${obj1.getObjectId} , ${obj2.getObjectId} ); `)
-    console.log("i see");
-    this.bound = new obj_bound(this.obj1, this.obj2, 100, 150);
+    this.packBasic.addAttribute(
+      "x1",
+      new refer(
+        function () {
+          return this.pos1.x.val;
+        }.bind(this)
+      )
+    );
+    this.packBasic.addAttribute(
+      "y1",
+      new refer(
+        function () {
+          return this.pos1.y.val;
+        }.bind(this)
+      )
+    );
+    this.packBasic.addAttribute(
+      "x2",
+      new refer(
+        function () {
+          return this.pos2.x.val;
+        }.bind(this)
+      )
+    );
+    this.packBasic.addAttribute(
+      "y2",
+      new refer(
+        function () {
+          return this.pos2.y.val;
+        }.bind(this)
+      )
+    );
+
+    this.packBasic.svgLayer = new svg_layer(this.packBasic, new pointer(0));
+    this.packBasic.holder.delete();
+    this.packBasic.hide._val = new refer(
+      function () {
+        return (
+          (this.obj1.hide != undefined && this.obj1.hide.val) ||
+          (this.obj2.hide != undefined && this.obj2.hide.val)
+        );
+      }.bind(this)
+    );
+
+    if (noForce) this.bound = new obj_bound(this.obj1, this.obj2, 0, Infinity);
+    else this.bound = new obj_bound(this.obj1, this.obj2, 100, 150);
+
+    if (arrow) {
+      this.arrow._val = new pack_line(
+        {
+          pos: new refer(
+            function () {
+              return new Coordinate2d(
+                (1 * this.pos1.x + 3 * this.pos2.x) / 4,
+                (1 * this.pos1.y + 3 * this.pos2.y) / 4
+              );
+            }.bind(this)
+          ),
+        },
+        {
+          pos: new refer(
+            function () {
+              return new Coordinate2d(
+                (0.99 * this.pos1.x + 3.01 * this.pos2.x) / 4,
+                (0.99 * this.pos1.y + 3.01 * this.pos2.y) / 4
+              );
+            }.bind(this)
+          ),
+        },
+        true
+      );
+      this.arrow.setAttribute("marker-end", "url(#arrow)");
+      this.arrow.hide._val = this.packBasic.hide;
+    }
+
+    this.packBasic.markStroke._val = "red";
+
     this.update();
+    return Delegation(this, ["packBasic", "packText"]);
   }
 
   get posCenter() {
@@ -1078,8 +1336,15 @@ export class pack_line {
     );
   }
 
+  delete() {
+    this.$deleted = true;
+    this.packBasic.delete();
+    this.bound.delete();
+  }
+
   update() {
-    this.svgObj.update();
+    // this.packBasic.update();
+    // if (this.arrow.val != null) console.log(this.arrow.pos1.x);
     updateLoop(this);
   }
 }
@@ -1090,6 +1355,8 @@ export class pack_array {
   gap = new pointer(50);
   rad = new pointer(0);
   size = 0;
+  $deleted = false;
+  hide = new pointer(false);
   constructor(pos, gap = pointer(50), rad = pointer(0)) {
     this.pos._val = pos;
     this.gap._val = gap;
@@ -1098,7 +1365,8 @@ export class pack_array {
     return Delegation(this, ["dot", "defaultArray"]);
   }
   containing = [];
-  defaultArray = new Proxy([], {
+  _defaultArray = [];
+  defaultArray = new Proxy(this._defaultArray, {
     get: (target, prop, receiver) => {
       if (prop == "isProxy") return true;
       if (prop in target) return Reflect.get(target, prop, receiver);
@@ -1107,10 +1375,21 @@ export class pack_array {
     },
     set: (target, prop, value, receiver) => {
       if (!isNaN(Number(prop))) {
-        return Reflect.set(target, prop, value, receiver);
+        {
+          prop = Number(prop);
+          if (prop < 0) return false;
+          if (typeof value != "object") value = new pack_text(value);
+          let tmp = undefined;
+          if (typeof target[prop] == "object" && "delete" in target[prop])
+            tmp = target[prop];
+          let ret = Reflect.set(target, prop, value, receiver);
+          if (ret == true && tmp != undefined) tmp.delete();
+          return ret;
+        }
       } else return false;
     },
   });
+  boxArray = [];
   maxIndex = -2;
   posGetter(index) {
     let xy = rotateMatrix(
@@ -1123,37 +1402,68 @@ export class pack_array {
     // console.log(xy);
     return new Coordinate2d(xy.x, xy.y);
   }
+  $increaseSize() {
+    this.maxIndex += 1;
+    let newBox = new pack_square();
+    newBox.svgObj = pack_array_svgBox.cloneNode();
+    newBox.layer = 0.5;
+    newBox.height._val = this.gap;
+    newBox.width._val = this.gap;
+    newBox.rotate._val = new refer(
+      function () {
+        return (this.rad.val / Math.PI) * 180;
+      }.bind(this)
+    );
+    newBox.holder.delete();
+    newBox.pos._val = this.coord(this.maxIndex);
+    newBox.hide._val = this.hide;
+    this.boxArray.push(newBox);
+  }
+  $decreaseSize() {
+    this.maxIndex -= 1;
+    this.boxArray.pop().delete();
+  }
   append(coord, index) {
     this.containing.push({ coord: coord, index: index });
     while (this.maxIndex < index) {
-      this.maxIndex += 1;
-      let newBox = new pack_square();
-      newBox.svgObj = pack_array_svgBox.cloneNode();
-      newBox.layer = 0.5;
-      newBox.height._val = this.gap;
-      newBox.width._val = this.gap;
-      newBox.rotate._val = new refer(
-        function () {
-          return (this.rad.val / Math.PI) * 180;
-        }.bind(this)
-      );
-      newBox.holder.delete();
-      // newBox.packBasic.holder = new svg_hold(
-      //   newBox.packBasic,
-      //   newBox.packBasic.pos
-      // );
-      this.containing.push({
-        coord: newBox.pos,
-        index: this.maxIndex,
-      });
+      this.$increaseSize();
     }
+  }
+  coord(index, adjustSize = true) {
+    while (this.maxIndex < index) {
+      this.$increaseSize();
+    }
+    return new refer(
+      function () {
+        return this.posGetter(index);
+      }.bind(this)
+    );
+  }
+  release(index) {
+    let ret = this._defaultArray[index];
+    this._defaultArray[index] = undefined;
+    return ret;
   }
   // append(val)
   // {
   //   this.containing.push({ coord: coord, index: index });
   // }
+  delete(keepElements = false) {
+    this.$deleted = true;
+    if (!keepElements) {
+      for (var i = 0; i < this.defaultArray.length; i++) {
+        if (
+          typeof this.defaultArray[i] == "object" &&
+          "delete" in this.defaultArray[i]
+        )
+          this.defaultArray[i].delete();
+      }
+    }
+    for (var i = 0; i < this.boxArray.length; i++) this.boxArray[i].delete();
+  }
 
   update() {
+    if (this.$deleted) return;
     for (var i = 0; i < this.containing.length; i++) {
       let coord = this.containing[i].coord;
       let index = this.containing[i].index;
@@ -1162,16 +1472,15 @@ export class pack_array {
       coord.y.val = newCoord.y.val;
     }
     for (var i = 0; i < this.defaultArray.length; i++) {
-      if (typeof this.defaultArray[i] == "number")
-        this.defaultArray[i] = new pack_text(this.defaultArray[i]);
       if (typeof this.defaultArray[i] != "object") continue;
       let coord = this.defaultArray[i].pos;
       let index = i;
       let newCoord = this.posGetter(index);
       coord.x.val = newCoord.x.val;
       coord.y.val = newCoord.y.val;
+      this.defaultArray[i].hide.val = this.hide.val;
     }
-
+    while (this.maxIndex < this.defaultArray.length - 1) this.$increaseSize();
     updateLoop(this);
   }
 }
@@ -1180,6 +1489,17 @@ export class pack_array {
   var svgLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
   svgLine.setAttribute("stroke", "gray");
   svgLine.setAttribute("stroke-width", "4");
+
+  var arrowHead = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "polygon"
+  );
+
+  arrowHead.setAttribute("fill", "gray");
+  arrowHead.setAttribute("points", "0, 0 10, 5 0, 10");
+  arrowHead.setAttribute("refX", "5");
+  arrowHead.setAttribute("refY", "5");
+  arrowHead.setAttribute("transfer", "(100, 100)");
 }
 {
   var svgCircleMarker = document.createElementNS(
@@ -1204,8 +1524,8 @@ export class pack_array {
   );
 
   // 設定 circle 的屬性
-  svgCircle.setAttribute("cx", 1000); // 設定圓心的 X 座標為點擊位置
-  svgCircle.setAttribute("cy", 1000); // 設定圓心的 Y 座標為點擊位置
+  svgCircle.setAttribute("cx", 100); // 設定圓心的 X 座標為點擊位置
+  svgCircle.setAttribute("cy", 100); // 設定圓心的 Y 座標為點擊位置
   svgCircle.setAttribute("r", "20"); // 設定圓形半徑
   svgCircle.setAttribute("fill", "white"); // 設定圓形顏色
   svgCircle.setAttribute("stroke", "black");
@@ -1260,9 +1580,23 @@ export class pack_array {
   var c7 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
 }
 let myArray = new pack_array(c1.pos, new pointer(50), new pointer(0));
-myArray.append(c2.pos, 0);
-myArray.append(c3.pos, 1);
-myArray.append(c4.pos, 3);
+c1.addEventListener(
+  "contextmenu",
+  function (event) {
+    event.preventDefault();
+    myArray.hide.val = !myArray.hide.val;
+    return false;
+  }.bind(c1)
+);
+// console.log(myArray.boxArray);
+myArray[0] = c2;
+myArray[1] = c3;
+myArray[2] = c3;
+myArray.release(1);
+myArray.release(2);
+
+myArray[3] = c4;
+
 let myArray2 = new pack_array(
   c4.pos,
   new pointer(50),
@@ -1272,32 +1606,28 @@ let myArray2 = new pack_array(
     }.bind(myArray)
   )
 );
-myArray2.append(c6.pos, 0);
-myArray2.append(c7.pos, 1);
+myArray2.hide._val = c4.hide;
+myArray2[0] = c6;
+myArray2[1] = c7;
+
 myArray[4] = 444;
 myArray[5] = 555;
 myArray[6] = new pack_circle();
-// console.log(myArray);
-let tmp = new pointer(c1);
+let l4 = new pack_line(myArray[6], c3, false, true);
+
 let l1 = new pack_line(c1, c5);
+l1.setAttribute("marker-mid", "url(#arrow)");
 
 let s1 = new pack_square();
 s1.text._val = "this is a square";
-// console.log(s1.svgObj.val.constructor.name);
-// console.log(s1.packText.svgObj.val);
-// console.log(s1.svgObj.appendChild);
-// s1.svgObj.appendChild(s1.packText.svgObj.val);
+// s1.mark._val = true;
+// s1.packText.mark._val = true;
 
-
-// let t1 = new pack_text();
-// t1.holder = new svg_hold(t1.svgBridge, t1.pos);
-// Reflect.defineProperty(t1, "hold", {
-//   value: new svg_hold(t1.svgBridge, t1.pos),
-//   writable: true,
-//   enumerable: true,
-//   configurable: true,
-// });
-// t1.holder = new svg_hold(t1.svgBridge, t1.pos);
+s1.mark._val = new refer(
+  function () {
+    return this.hover.val || this.packText.hover.val;
+  }.bind(s1)
+);
 
 let c8 = new pack_square();
 c8.pos.x._val = new refer(
@@ -1311,16 +1641,18 @@ c8.pos.y._val = new refer(
   }.bind(this)
 );
 c8.layer = 0;
+c8.hide.val = true;
+myArray[6].text._val = "hi";
 
 let m = new pack_circle();
 m.pos.x._val = new pointer(c2.pos.x);
 m.pos.y._val = new pointer(c2.pos.y);
 m.pos._val = c2.pos;
 m.r.val = 25;
-m.packBasic.layer = 3;
-m.packBasic.svgBridge.setAttribute("fill", "none");
-m.packBasic.svgBridge.setAttribute("stroke", "red");
-m.packBasic.svgBridge.setAttribute("stroke-width", "4");
+m.layer = 3;
+m.fill._val = "none";
+m.stroke._val = "red";
+m.setAttribute("stroke-width", "4");
 
 let animateData = {
   ori: new pointer(),
@@ -1387,7 +1719,7 @@ window.addEventListener("mouseup", function (event) {
   mouse.hold = false;
 });
 
-/*window.addEventListener("keydown", function (event) {
+window.addEventListener("keydown", function (event) {
   // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
   if (event.code === "Space" || event.key === " ") {
     console.log("空白鍵被按下！");
@@ -1400,16 +1732,15 @@ window.addEventListener("mouseup", function (event) {
     // 防止預設行為，例如捲動頁面
     event.preventDefault();
   }
-});*/
+});
 
 // objUpdateList = [];
 
 // setTimeout(sortByLayer, 100);
 sortByLayer();
+
 export function update() {
   updateTime();
-
-  // myArray[5] = 5555;
 
   if (svg_layerSortTrigger) {
     sortByLayer();
@@ -1432,17 +1763,28 @@ export function update() {
 
 update();
 
+export function test() {
+  myArray[5].val = myArray[5] + 1;
+  setTimeout(test, frameT);
+}
+test();
+
 // setTimeout(() => {
 //   animate(c1.pos);
 // }, 1000);
 
 let animationList = [c1.pos, c2.pos, c3.pos, c4.pos, c5.pos, c6.pos, c7.pos];
+let animationList2 = [c1, c2, c3, c4, c5, c6, c7];
 let i = 0;
 export function playanimation() {
   if (i >= animationList.length) i = 0;
   animate(animationList[i]);
-  i += 1;
+  animationList2[i].mark._val = true;
+  animationList2[
+    (i - 2 + animationList2.length) % animationList2.length
+  ].mark._val = false;
   setTimeout(playanimation, 1500);
+  i += 1;
 }
 
 setTimeout(() => {
@@ -1550,3 +1892,28 @@ window.addEventListener("keydown", function (event) {
     event.preventDefault();
   }
 });
+
+// let demo_c1 = new pack_circle();
+// let demo_c2 = new pack_circle();
+let demo_c1 = new pack_circle({ x: 100, y: 200 }, 20, "1");
+let demo_c2 = new pack_circle({ x: 100, y: 200 }, 20, "2");
+let demo_l1 = new pack_line(demo_c1, demo_c2, false, true);
+demo_l1.mark._val = true;
+demo_l1.text._val = "this is a line";
+// let arrow = url(#arrow);
+// console.log(arrow);
+// demo_l1.setAttribute("marker-end", "url(#arrow)");
+// console.log(demo_l1.svgObj.val);
+// console.log(l1);
+// console.log(demo_l1);
+// demo_c1.text._val = demo_c1.pos.x;
+// demo_c2.text._val = demo_c1.pos.y;
+// demo_c2.pos.x._val = new refer(
+//   function () {
+//     return this.pos.x * 2;
+//   }.bind(demo_c1)
+// );
+
+// let demo_s1 = new pack_square(200, 200, 40, 40, "s1");
+
+// let l1 = new pack_line(c1, c5);
