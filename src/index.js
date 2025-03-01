@@ -4,6 +4,13 @@ import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
+function step() {
+  return new Promise(resolve => {
+    document.getElementById("confirmButton").addEventListener("click", () => {
+      resolve("用户确认");
+    });
+  });
+}
 const input = () => {
   if (currentIndex < inputBuffer.length) {
     return inputBuffer[currentIndex++];
@@ -21,36 +28,12 @@ function isProxy(obj) {
   if (typeof obj != "object") return false;
   return obj.isProxy;
 }
-function GetPosX(obj) {
-  return obj.pos.x;
-}
-function GetPos1X(obj) {
-  return obj.pos1.x;
-}
-function GetPos1Y(obj) {
-  return obj.pos1.y;
-}
-function GetPos2X(obj) {
-  return obj.pos2.x;
-}
-function GetPos2Y(obj) {
-  return obj.pos2.y;
-}
-function GetPosY(obj) {
-  return obj.pos.y;
-}
+
 function wait(ms) {
   
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function trackExecution(code) {
-  return code.split("\n").map((line, index) => {
-    let trimmedLine = line.trim();
-    if (trimmedLine === "" || trimmedLine.startsWith("//")) return line;
-    return `console.log("Executing line ${index + 1}");\n${line}`;
-  }).join("\n");
-}
 // 高亮当前执行的行
 // 存储 Monaco 高亮的装饰器
 // 存储 Monaco 高亮的装饰器
@@ -100,7 +83,7 @@ async function executeCode() {
     if (trimmedLine === "" || trimmedLine.startsWith("//")) return;
 
     // ✅ 每一行代码执行前调用 `highlightLine(index)`
-    lines.push(`
+    lines.push(`;
       highlightLine(${index});
       console.log("Executing line ${index + 1}"); 
     `);
@@ -108,7 +91,7 @@ async function executeCode() {
   });
   console.log(lines.join("\n"));
   let asyncCode = `(async () => { ${lines.join("\n")} })()`;
-
+  console.log(asyncCode);
   try {
     await eval(asyncCode);
   } catch (error) {
@@ -143,7 +126,7 @@ window.onload = () => {
     language: "plaintext",
     theme: "vs-light",
     minimap: { enabled: false },
-    automaticLayout: false,
+    automaticLayout: true,
     lineNumbers: "off",        // 關閉行號
     glyphMargin: false,        // 移除左側行數間距
     folding: false,            // 移除程式碼折疊功能（避免留白）
@@ -156,8 +139,8 @@ window.onload = () => {
     ani_lines=[]
     window.output_area.querySelector('#output-txt').innerHTML = '';
 
-    // 清空畫布
-    svg.innerHTML = '';
+    svg.replaceChildren();
+
 
     
 
@@ -169,26 +152,6 @@ window.onload = () => {
     window.output_area.style.display = "block";
     output_btn.classList.add("active-btn");
     input_btn.classList.remove("active-btn");
-  });
-  document.querySelector('#show').addEventListener('click', () => {
-    console.log(ani_lines);
-  });
-  document.querySelector("#play").addEventListener("click", () => {
-    
-    let all_line=ani_lines.length;
-    async function executeNextLine() {
-      for(let i=0;i<all_line;i++){
-        console.log(`執行 ${i} , ${ani_lines[i]}`);
-        let code_to_run=ani_lines.slice(0, i+1).join("\n");
-        await new Promise(resolve => setTimeout(resolve, 500));
-        document.getElementById("mySvg").innerHTML = "";
-        eval(code_to_run);
-      }
-      ani_lines=[]
-    }
-  
-    executeNextLine(); // 開始執行第一行
-    
   });
   input_area.style.display = "block";
   window.output_area.style.display = "none"; // 預設隱藏 output-area
@@ -1358,7 +1321,7 @@ export class pack_array {
   size = 0;
   $deleted = false;
   hide = new pointer(false);
-  constructor(pos, gap = pointer(50), rad = pointer(0)) {
+  constructor(pos, gap = new pointer(50), rad = new pointer(0)) {
     this.pos._val = pos;
     this.gap._val = gap;
     this.rad._val = rad;
@@ -1367,24 +1330,29 @@ export class pack_array {
   }
   containing = [];
   _defaultArray = [];
-  defaultArray = new Proxy(this._defaultArray, {
-    get: (target, prop, receiver) => {
+  defaultArray = new Proxy(this, {
+    get: (target, prop) => {
       if (prop == "isProxy") return true;
-      if (prop in target) return Reflect.get(target, prop, receiver);
-      if (!isNaN(Number(prop))) return Reflect.get(target, prop, receiver);
+      let tarArray = target._defaultArray;
+      if (prop in tarArray) return Reflect.get(tarArray, prop);
+      if (!isNaN(Number(prop))) return Reflect.get(tarArray, prop);
       else return undefined;
     },
-    set: (target, prop, value, receiver) => {
+    set: (target, prop, value) => {
       if (!isNaN(Number(prop))) {
         {
+          let tarArray = target._defaultArray;
           prop = Number(prop);
           if (prop < 0) return false;
           if (typeof value != "object") value = new pack_text(value);
           let tmp = undefined;
-          if (typeof target[prop] == "object" && "delete" in target[prop])
-            tmp = target[prop];
-          let ret = Reflect.set(target, prop, value, receiver);
+          if (typeof tarArray[prop] == "object" && "delete" in tarArray[prop])
+            tmp = tarArray[prop];
+          let ret = Reflect.set(tarArray, prop, value);
           if (ret == true && tmp != undefined) tmp.delete();
+          while (target.maxIndex < target.defaultArray.length - 1)
+            target.$increaseSize();
+
           return ret;
         }
       } else return false;
@@ -1418,7 +1386,7 @@ export class pack_array {
     newBox.holder.delete();
     newBox.pos._val = this.coord(this.maxIndex);
     newBox.hide._val = this.hide;
-    this.boxArray.push(newBox);
+    this.boxArray[this.maxIndex] = newBox;
   }
   $decreaseSize() {
     this.maxIndex -= 1;
@@ -1567,126 +1535,94 @@ export class pack_array {
   pack_array_svgBox.setAttribute("stroke-width", "2");
   pack_array_svgBox.setAttribute("stroke", "gray");
 }
-{
-  var c1 = new pack_circle(
-    { x: 300 * Math.random(), y: 300 * Math.random() },
-    20,
-    "a"
-  );
-  var c2 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
-  var c3 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
-  var c4 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
-  var c5 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
-  var c6 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
-  var c7 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
-}
-let myArray = new pack_array(c1.pos, new pointer(50), new pointer(0));
-c1.addEventListener(
-  "contextmenu",
-  function (event) {
-    event.preventDefault();
-    myArray.hide.val = !myArray.hide.val;
-    return false;
-  }.bind(c1)
-);
-// console.log(myArray.boxArray);
-myArray[0] = c2;
-myArray[1] = c3;
-myArray[2] = c3;
-myArray.release(1);
-myArray.release(2);
+// {
+//   var c1 = new pack_circle(
+//     { x: 300 * Math.random(), y: 300 * Math.random() },
+//     20,
+//     "a"
+//   );
+//   var c2 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
+//   var c3 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
+//   var c4 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
+//   var c5 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
+//   var c6 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
+//   var c7 = new pack_circle({ x: 300 * Math.random(), y: 300 * Math.random() });
+// }
+// let myArray = new pack_array(c1.pos, new pointer(50), new pointer(0));
+// c1.addEventListener(
+//   "contextmenu",
+//   function (event) {
+//     event.preventDefault();
+//     myArray.hide.val = !myArray.hide.val;
+//     return false;
+//   }.bind(c1)
+// );
+// // console.log(myArray.boxArray);
+// myArray[0] = c2;
+// myArray[1] = c3;
+// myArray[2] = c3;
+// myArray.release(1);
+// myArray.release(2);
 
-myArray[3] = c4;
+// myArray[3] = c4;
 
-let myArray2 = new pack_array(
-  c4.pos,
-  new pointer(50),
-  new refer(
-    function () {
-      return this.rad + Math.PI / 2;
-    }.bind(myArray)
-  )
-);
-myArray2.hide._val = c4.hide;
-myArray2[0] = c6;
-myArray2[1] = c7;
+// let myArray2 = new pack_array(
+//   c4.pos,
+//   new pointer(50),
+//   new refer(
+//     function () {
+//       return this.rad + Math.PI / 2;
+//     }.bind(myArray)
+//   )
+// );
+// myArray2.hide._val = c4.hide;
+// myArray2[0] = c6;
+// myArray2[1] = c7;
 
-myArray[4] = 444;
-myArray[5] = 555;
-myArray[6] = new pack_circle();
-let l4 = new pack_line(myArray[6], c3, false, true);
+// myArray[4] = 444;
+// myArray[5] = 555;
+// myArray[6] = new pack_circle();
+// let l4 = new pack_line(myArray[6], c3, false, true);
 
-let l1 = new pack_line(c1, c5);
-l1.setAttribute("marker-mid", "url(#arrow)");
+// let l1 = new pack_line(c1, c5);
+// l1.setAttribute("marker-mid", "url(#arrow)");
 
-let s1 = new pack_square();
-s1.text._val = "this is a square";
-// s1.mark._val = true;
-// s1.packText.mark._val = true;
+// let s1 = new pack_square();
+// s1.text._val = "this is a square";
+// // s1.mark._val = true;
+// // s1.packText.mark._val = true;
 
-s1.mark._val = new refer(
-  function () {
-    return this.hover.val || this.packText.hover.val;
-  }.bind(s1)
-);
+// s1.mark._val = new refer(
+//   function () {
+//     return this.hover.val || this.packText.hover.val;
+//   }.bind(s1)
+// );
 
-let c8 = new pack_square();
-c8.pos.x._val = new refer(
-  function () {
-    return mouse.x;
-  }.bind(this)
-);
-c8.pos.y._val = new refer(
-  function () {
-    return mouse.y;
-  }.bind(this)
-);
-c8.layer = 0;
-c8.hide.val = true;
-myArray[6].text._val = "hi";
+// let c8 = new pack_square();
+// c8.pos.x._val = new refer(
+//   function () {
+//     return mouse.x;
+//   }.bind(this)
+// );
+// c8.pos.y._val = new refer(
+//   function () {
+//     return mouse.y;
+//   }.bind(this)
+// );
+// c8.layer = 0;
+// c8.hide.val = true;
+// myArray[6].text._val = "hi";
 
-let m = new pack_circle();
-m.pos.x._val = new pointer(c2.pos.x);
-m.pos.y._val = new pointer(c2.pos.y);
-m.pos._val = c2.pos;
-m.r.val = 25;
-m.layer = 3;
-m.fill._val = "none";
-m.stroke._val = "red";
-m.setAttribute("stroke-width", "4");
+// let m = new pack_circle();
+// m.pos.x._val = new pointer(c2.pos.x);
+// m.pos.y._val = new pointer(c2.pos.y);
+// m.pos._val = c2.pos;
+// m.r.val = 25;
+// m.layer = 3;
+// m.fill._val = "none";
+// m.stroke._val = "red";
+// m.setAttribute("stroke-width", "4");
 
-let animateData = {
-  ori: new pointer(),
-  startT: 0,
-  duration: 0,
-  end: new pointer(),
-};
-let aD = animateData;
-
-export function animate(end, duration = 1000) {
-  // console.log("called animation");
-  aD.startT = time.curFrame;
-  aD.duration = duration;
-  aD.ori._val = m.packBasic.pos.val;
-  aD.end._val = end;
-  m.packBasic.pos._val = new refer(
-    function () {
-      // console.log("called animation pos");
-      let dt = time.curFrame - aD.startT;
-      let k = dt / aD.duration;
-      if (k > 1) k = k;
-      let x = aD.ori.x.val * (1 - k) + aD.end.x.val * k;
-      let y = aD.ori.y.val * (1 - k) + aD.end.y.val * k;
-      return new Coordinate2d(new pointer(x), new pointer(y));
-    },
-    function () {
-      console.error("oof");
-    }
-  );
-  setTimeout(() => {
-    m.packBasic.pos._val = end;
-  }, duration);
-}
 // function _animate;() {}
 
 export function updateTime() {
@@ -1720,20 +1656,20 @@ window.addEventListener("mouseup", function (event) {
   mouse.hold = false;
 });
 
-window.addEventListener("keydown", function (event) {
-  // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
-  if (event.code === "Space" || event.key === " ") {
-    console.log("空白鍵被按下！");
-    s1.width.val += 1;
-    myArray.rad._val += Math.PI / 45;
-    // let i = myPoints.length - 1;
-    // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
-    // myGravity.append(myPoints[i]);
+// window.addEventListener("keydown", function (event) {
+//   // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
+//   if (event.code === "Space" || event.key === " ") {
+//     console.log("空白鍵被按下！");
+//     s1.width.val += 1;
+//     myArray.rad._val += Math.PI / 45;
+//     // let i = myPoints.length - 1;
+//     // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
+//     // myGravity.append(myPoints[i]);
 
-    // 防止預設行為，例如捲動頁面
-    event.preventDefault();
-  }
-});
+//     // 防止預設行為，例如捲動頁面
+//     event.preventDefault();
+//   }
+// });
 
 // objUpdateList = [];
 
@@ -1764,33 +1700,33 @@ export function update() {
 
 update();
 
-export function test() {
-  myArray[5].val = myArray[5] + 1;
-  setTimeout(test, frameT);
-}
-test();
+// export function test() {
+//   myArray[5].val = myArray[5] + 1;
+//   setTimeout(test, frameT);
+// }
+// test();
 
 // setTimeout(() => {
 //   animate(c1.pos);
 // }, 1000);
 
-let animationList = [c1.pos, c2.pos, c3.pos, c4.pos, c5.pos, c6.pos, c7.pos];
-let animationList2 = [c1, c2, c3, c4, c5, c6, c7];
-let i = 0;
-export function playanimation() {
-  if (i >= animationList.length) i = 0;
-  animate(animationList[i]);
-  animationList2[i].mark._val = true;
-  animationList2[
-    (i - 2 + animationList2.length) % animationList2.length
-  ].mark._val = false;
-  setTimeout(playanimation, 1500);
-  i += 1;
-}
+// let animationList = [c1.pos, c2.pos, c3.pos, c4.pos, c5.pos, c6.pos, c7.pos];
+// let animationList2 = [c1, c2, c3, c4, c5, c6, c7];
+// let i = 0;
+// export function playanimation() {
+//   if (i >= animationList.length) i = 0;
+//   animate(animationList[i]);
+//   animationList2[i].mark._val = true;
+//   animationList2[
+//     (i - 2 + animationList2.length) % animationList2.length
+//   ].mark._val = false;
+//   setTimeout(playanimation, 1500);
+//   i += 1;
+// }
 
-setTimeout(() => {
-  playanimation();
-}, 1000);
+// setTimeout(() => {
+//   playanimation();
+// }, 1000);
 
 export class pack_segTree {
   pos = new pointer(new Coordinate2d());
@@ -1878,43 +1814,45 @@ export class pack_segTree {
   }
 }
 
-let mySegTree = new pack_segTree(13, 600, 40);
+// let mySegTree = new pack_segTree(13, 600, 40);
 
-window.addEventListener("keydown", function (event) {
-  // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
-  if (event.code === "Space" || event.key === " ") {
-    mySegTree.len._val += 3;
+// window.addEventListener("keydown", function (event) {
+//   // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
+//   if (event.code === "Space" || event.key === " ") {
+//     mySegTree.len._val += 3;
 
-    // let i = myPoints.length - 1;
-    // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
-    // myGravity.append(myPoints[i]);
+//     // let i = myPoints.length - 1;
+//     // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
+//     // myGravity.append(myPoints[i]);
 
-    // 防止預設行為，例如捲動頁面
-    event.preventDefault();
-  }
-});
+//     // 防止預設行為，例如捲動頁面
+//     event.preventDefault();
+//   }
+// });
 
 // let demo_c1 = new pack_circle();
 // let demo_c2 = new pack_circle();
 let demo_c1 = new pack_circle({ x: 100, y: 200 }, 20, "1");
-let demo_c2 = new pack_circle({ x: 100, y: 200 }, 20, "2");
-let demo_l1 = new pack_line(demo_c1, demo_c2, false, true);
-demo_l1.mark._val = true;
-demo_l1.text._val = "this is a line";
-// let arrow = url(#arrow);
-// console.log(arrow);
-// demo_l1.setAttribute("marker-end", "url(#arrow)");
-// console.log(demo_l1.svgObj.val);
-// console.log(l1);
-// console.log(demo_l1);
-// demo_c1.text._val = demo_c1.pos.x;
-// demo_c2.text._val = demo_c1.pos.y;
-// demo_c2.pos.x._val = new refer(
-//   function () {
-//     return this.pos.x * 2;
-//   }.bind(demo_c1)
-// );
+// let demo_c2 = new pack_circle({ x: 100, y: 200 }, 20, "2");
+// let demo_l1 = new pack_line(demo_c1, demo_c2, false, true);
+// demo_l1.mark._val = true;
+// demo_l1.text._val = "this is a line";
+// // let arrow = url(#arrow);
+// // console.log(arrow);
+// // demo_l1.setAttribute("marker-end", "url(#arrow)");
+// // console.log(demo_l1.svgObj.val);
+// // console.log(l1);
+// // console.log(demo_l1);
+// // demo_c1.text._val = demo_c1.pos.x;
+// // demo_c2.text._val = demo_c1.pos.y;
+// // demo_c2.pos.x._val = new refer(
+// //   function () {
+// //     return this.pos.x * 2;
+// //   }.bind(demo_c1)
+// // );
 
-// let demo_s1 = new pack_square(200, 200, 40, 40, "s1");
+// // let demo_s1 = new pack_square(200, 200, 40, 40, "s1");
 
-// let l1 = new pack_line(c1, c5);
+// // let l1 = new pack_line(c1, c5);
+// myArray.boxArray[-1].mark.val = true;
+// myArray.boxArray[3].mark.val = true;
