@@ -1,11 +1,11 @@
-import './style.css';
-import './reset.css';
+import "./style.css";
+import "./reset.css";
 import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
 function step() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     document.getElementById("confirmButton").addEventListener("click", () => {
       resolve("用户确认");
     });
@@ -14,24 +14,22 @@ function step() {
 const input = () => {
   if (currentIndex < inputBuffer.length) {
     return inputBuffer[currentIndex++];
-  } 
-  else {
+  } else {
     return null; // 如果沒有更多輸入，返回 null
   }
 };
 
 const print = (str) => {
-  output_area.querySelector('#output-txt').innerHTML += str;
-}
-let ani_lines=[];
+  output_area.querySelector("#output-txt").innerHTML += str;
+};
+let ani_lines = [];
 function isProxy(obj) {
   if (typeof obj != "object") return false;
   return obj.isProxy;
 }
 
 function wait(ms) {
-  
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // 高亮当前执行的行
@@ -96,7 +94,6 @@ function splitCodeSafely(code) {
 }
 
 function highlightLine(lineNumber) {
-  
   if (!window.code_monaco) return; // 确保 Monaco Editor 存在
   if (!window.decorations) {
     window.decorations = window.code_monaco.createDecorationsCollection([]);
@@ -115,6 +112,9 @@ function highlightLine(lineNumber) {
 
 async function executeCode() {
   console.log("hamster run code");
+
+  //  the objects will be genuinelly deleted - by Kevin110026
+  updateLoop_curLifeRound++;
 
   if (!window.code_monaco) {
     console.error("Monaco Editor 未初始化！");
@@ -178,22 +178,16 @@ console.log("Executing line ${i }");
   }
 }
 
-
-
 window.onload = () => {
-  
   const code_editor = document.getElementById("code-editor");
   const input_area = document.getElementById("input-area");
   window.output_area = document.getElementById("output-area");
-  const input_btn = document.querySelector('#input-area-btn');
-  const output_btn = document.querySelector('#output-area-btn');
-  
-  
-  
-  
+  const input_btn = document.querySelector("#input-area-btn");
+  const output_btn = document.querySelector("#output-area-btn");
 
   window.code_monaco = monaco.editor.create(code_editor, {
-    value: "output(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
+    value:
+      "output(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
     language: "javascript",
     theme: "vs-light",
     minimap: { enabled: false },
@@ -206,22 +200,19 @@ window.onload = () => {
     theme: "vs-light",
     minimap: { enabled: false },
     automaticLayout: true,
-    lineNumbers: "off",        // 關閉行號
-    glyphMargin: false,        // 移除左側行數間距
-    folding: false,            // 移除程式碼折疊功能（避免留白）
-    lineDecorationsWidth: 5,   // 移除行裝飾欄位
-    lineNumbersMinChars: 0     // 確保行數欄位不佔空間
+    lineNumbers: "off", // 關閉行號
+    glyphMargin: false, // 移除左側行數間距
+    folding: false, // 移除程式碼折疊功能（避免留白）
+    lineDecorationsWidth: 5, // 移除行裝飾欄位
+    lineNumbersMinChars: 0, // 確保行數欄位不佔空間
   });
 
-  document.querySelector('#run').addEventListener('click', () => {
+  document.querySelector("#run").addEventListener("click", () => {
     const runcode = window.code_monaco.getValue();
-    ani_lines=[]
-    window.output_area.querySelector('#output-txt').innerHTML = '';
+    ani_lines = [];
+    window.output_area.querySelector("#output-txt").innerHTML = "";
 
-    svg.replaceChildren();
-
-
-    
+    // svg.replaceChildren();
 
     // 執行輸入的程式
     executeCode(runcode);
@@ -239,22 +230,20 @@ window.onload = () => {
 
   // 按鈕切換
 
-  document.querySelector('#input-area-btn').addEventListener("click", () => {
+  document.querySelector("#input-area-btn").addEventListener("click", () => {
     input_area.style.display = "block";
     window.output_area.style.display = "none";
     input_btn.classList.add("active-btn");
     output_btn.classList.remove("active-btn");
   });
 
-  document.querySelector('#output-area-btn').addEventListener("click", () => {
+  document.querySelector("#output-area-btn").addEventListener("click", () => {
     input_area.style.display = "none";
     window.output_area.style.display = "block";
     output_btn.classList.add("active-btn");
     input_btn.classList.remove("active-btn");
   });
-
 };
-
 
 // 取得 SVG 容器
 var svg = document.getElementById("mySvg");
@@ -1766,7 +1755,6 @@ window.addEventListener("keydown", function (event) {
     //     updateLoop_curLifeRound
     //   );
     // }, 10);
-
     // 防止預設行為，例如捲動頁面
     // event.preventDefault();
   }
