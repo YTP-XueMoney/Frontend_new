@@ -38,6 +38,62 @@ function wait(ms) {
 // 存储 Monaco 高亮的装饰器
 // 存储 Monaco 高亮的装饰器
 
+function splitCodeSafely(code) {
+  let lines = [];
+  let buffer = "";
+  let insideForLoop = false;
+  let parenDepth = 0;
+  let insideForBody = false; // 用于检测 `{}` 代码块
+
+  for (let i = 0; i < code.length; i++) {
+      let char = code[i];
+
+      // ✅ 遇到 "for("，开始保护 `for(;;)` 结构
+      if (!insideForLoop && code.slice(i, i + 3) === "for") {
+          insideForLoop = true;
+          parenDepth = 1; // 追踪括号深度
+      }
+
+      // ✅ `for(;;)` 内 `()` 括号匹配
+      if (insideForLoop) {
+          if (char === "(") parenDepth++;
+          if (char === ")") parenDepth--;
+
+          // ✅ `for(;;)` 结束
+          if (parenDepth === 0) {
+              insideForLoop = false;
+              insideForBody = true; // **即将进入 `{}` 代码块**
+          }
+      }
+
+      // ✅ 追踪 `for` 代码块 `{}` 深度
+      if (insideForBody) {
+          if (char === "{") parenDepth++;
+          if (char === "}") parenDepth--;
+
+          // ✅ `for` 代码块结束
+          if (parenDepth === 0) {
+              insideForBody = false;
+          }
+      }
+
+      // ✅ `for(;;)` 内的 `;` 不拆分
+      if (char === ";" && insideForLoop) {
+          buffer += char;
+      }
+      // ✅ 其他代码按 `;` 分割
+      else if (char === ";" || char === "\n" ||char === "{" ||char =="}") {
+          lines.push(buffer.trim() + char); // 还原代码
+          buffer = ""; // 清空缓冲区
+      } else {
+          buffer += char;
+      }
+  }
+
+  if (buffer.trim()) lines.push(buffer.trim()); // 添加剩余代码
+
+  return lines;
+}
 
 function highlightLine(lineNumber) {
   
@@ -76,21 +132,44 @@ async function executeCode() {
     return;
   }
 
-  let lines = [];
-
-  code.split("\n").forEach((line, index) => {
+  let safeLines = splitCodeSafely(code);
+  let processedLines = [];
+  let insideForBody = false; // 是否在 `{}` 代码块内
+  let i=0;
+safeLines.forEach((line, index) => {
     let trimmedLine = line.trim();
     if (trimmedLine === "" || trimmedLine.startsWith("//")) return;
-
-    // ✅ 每一行代码执行前调用 `highlightLine(index)`
-    lines.push(`;
-      highlightLine(${index});
-      console.log("Executing line ${index + 1}"); 
+    console.log(trimmedLine);
+    i++;
+    // ✅ `for(;;)` 本身不插入 `highlightLine()`
+    if (trimmedLine.startsWith("for")) {
+        processedLines.push(trimmedLine);
+        insideForBody = true; // **即将进入 `{}` 代码块**
+        return;
+    }
+    if (trimmedLine.startsWith("else")) {
+      processedLines.push(trimmedLine);
+      return;
+    }
+    
+    // ✅ `{}` 代码块结束，标记退出
+    if (trimmedLine === "}") {
+        processedLines.push(trimmedLine);
+        insideForBody = false;
+        return;
+    }
+    
+    // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
+    processedLines.push(`
+highlightLine(${i});
+console.log("Executing line ${i }");
     `);
-    lines.push(line);
-  });
-  console.log(lines.join("\n"));
-  let asyncCode = `(async () => { ${lines.join("\n")} })()`;
+
+    processedLines.push(trimmedLine);
+});
+      
+  console.log(processedLines.join("\n"));
+  let asyncCode = `(async () => { ${processedLines.join("\n")} })()`;
   console.log(asyncCode);
   try {
     await eval(asyncCode);
