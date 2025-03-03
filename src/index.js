@@ -76,11 +76,11 @@ function splitCodeSafely(code) {
       }
 
       // ✅ `for(;;)` 内的 `;` 不拆分
-      if (char === ";" && insideForLoop) {
+      if (char === ";" && insideForLoop && parenDepth===2) {
           buffer += char;
       }
       // ✅ 其他代码按 `;` 分割
-      else if (char === ";") {
+      else if (char === ";" || char =="\n" || char =="\r") {
           lines.push(buffer.trim() + char); // 还原代码
           buffer = ""; // 清空缓冲区
       } else {
@@ -136,36 +136,38 @@ async function executeCode() {
   let processedLines = [];
   let insideForBody = false; // 是否在 `{}` 代码块内
   let i=0;
+  let isafter=0;
 safeLines.forEach((line, index) => {
     let trimmedLine = line.trim();
-    if (trimmedLine === "" || trimmedLine.startsWith("//")) return;
-    console.log(trimmedLine);
+    console.log(`/${i+1} + ${line}/`);
+    if(isafter){
+      isafter=0;
+      return;
+    }
     i++;
+    console.log("line add");
+    if (trimmedLine === "" || trimmedLine.startsWith("//")){
+      processedLines.push(trimmedLine);
+      return;
+    }
+    
     // ✅ `for(;;)` 本身不插入 `highlightLine()`
     if (trimmedLine.startsWith("for")) {
         processedLines.push(trimmedLine);
         insideForBody = true; // **即将进入 `{}` 代码块**
         return;
     }
-    if (trimmedLine.startsWith("else")) {
-      processedLines.push(trimmedLine);
-      return;
-    }
-    
-    // ✅ `{}` 代码块结束，标记退出
-    if (trimmedLine === "}") {
-        processedLines.push(trimmedLine);
-        insideForBody = false;
-        return;
-    }
-    
-    // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
-    processedLines.push(`
-highlightLine(${i});
-console.log("Executing line ${i }");
-    `);
-
     processedLines.push(trimmedLine);
+    // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
+    if(trimmedLine[trimmedLine.length-1]===";"){
+      processedLines.push(`
+highlightLine(${i-1});
+console.log("Executing line ${i}");
+      `);
+        isafter=1;
+    }
+
+    
 });
       
   console.log(processedLines.join("\n"));
