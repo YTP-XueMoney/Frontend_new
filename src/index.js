@@ -1,11 +1,11 @@
-import './style.css';
-import './reset.css';
+import "./style.css";
+import "./reset.css";
 import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
 function step() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     document.getElementById("confirmButton").addEventListener("click", () => {
       resolve("用户确认");
     });
@@ -14,33 +14,29 @@ function step() {
 const input = () => {
   if (currentIndex < inputBuffer.length) {
     return inputBuffer[currentIndex++];
-  } 
-  else {
+  } else {
     return null; // 如果沒有更多輸入，返回 null
   }
 };
 
 const print = (str) => {
-  output_area.querySelector('#output-txt').innerHTML += str;
-}
-let ani_lines=[];
+  output_area.querySelector("#output-txt").innerHTML += str;
+};
+let ani_lines = [];
 function isProxy(obj) {
   if (typeof obj != "object") return false;
   return obj.isProxy;
 }
 
 function wait(ms) {
-  
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // 高亮当前执行的行
 // 存储 Monaco 高亮的装饰器
 // 存储 Monaco 高亮的装饰器
 
-
 function highlightLine(lineNumber) {
-  
   if (!window.code_monaco) return; // 确保 Monaco Editor 存在
   if (!window.decorations) {
     window.decorations = window.code_monaco.createDecorationsCollection([]);
@@ -59,6 +55,9 @@ function highlightLine(lineNumber) {
 
 async function executeCode() {
   console.log("hamster run code");
+
+  //  the objects will be genuinelly deleted - by Kevin110026
+  updateLoop_curLifeRound++;
 
   if (!window.code_monaco) {
     console.error("Monaco Editor 未初始化！");
@@ -99,22 +98,16 @@ async function executeCode() {
   }
 }
 
-
-
 window.onload = () => {
-  
   const code_editor = document.getElementById("code-editor");
   const input_area = document.getElementById("input-area");
   window.output_area = document.getElementById("output-area");
-  const input_btn = document.querySelector('#input-area-btn');
-  const output_btn = document.querySelector('#output-area-btn');
-  
-  
-  
-  
+  const input_btn = document.querySelector("#input-area-btn");
+  const output_btn = document.querySelector("#output-area-btn");
 
   window.code_monaco = monaco.editor.create(code_editor, {
-    value: "output(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
+    value:
+      "output(input() + ', hello world.')\nlet mySegTree = new pack_segTree(13, 600, 40);",
     language: "javascript",
     theme: "vs-light",
     minimap: { enabled: false },
@@ -127,22 +120,19 @@ window.onload = () => {
     theme: "vs-light",
     minimap: { enabled: false },
     automaticLayout: true,
-    lineNumbers: "off",        // 關閉行號
-    glyphMargin: false,        // 移除左側行數間距
-    folding: false,            // 移除程式碼折疊功能（避免留白）
-    lineDecorationsWidth: 5,   // 移除行裝飾欄位
-    lineNumbersMinChars: 0     // 確保行數欄位不佔空間
+    lineNumbers: "off", // 關閉行號
+    glyphMargin: false, // 移除左側行數間距
+    folding: false, // 移除程式碼折疊功能（避免留白）
+    lineDecorationsWidth: 5, // 移除行裝飾欄位
+    lineNumbersMinChars: 0, // 確保行數欄位不佔空間
   });
 
-  document.querySelector('#run').addEventListener('click', () => {
+  document.querySelector("#run").addEventListener("click", () => {
     const runcode = window.code_monaco.getValue();
-    ani_lines=[]
-    window.output_area.querySelector('#output-txt').innerHTML = '';
+    ani_lines = [];
+    window.output_area.querySelector("#output-txt").innerHTML = "";
 
-    svg.replaceChildren();
-
-
-    
+    // svg.replaceChildren();
 
     // 執行輸入的程式
     executeCode(runcode);
@@ -160,22 +150,20 @@ window.onload = () => {
 
   // 按鈕切換
 
-  document.querySelector('#input-area-btn').addEventListener("click", () => {
+  document.querySelector("#input-area-btn").addEventListener("click", () => {
     input_area.style.display = "block";
     window.output_area.style.display = "none";
     input_btn.classList.add("active-btn");
     output_btn.classList.remove("active-btn");
   });
 
-  document.querySelector('#output-area-btn').addEventListener("click", () => {
+  document.querySelector("#output-area-btn").addEventListener("click", () => {
     input_area.style.display = "none";
     window.output_area.style.display = "block";
     output_btn.classList.add("active-btn");
     input_btn.classList.remove("active-btn");
   });
-
 };
-
 
 // 取得 SVG 容器
 var svg = document.getElementById("mySvg");
@@ -202,8 +190,26 @@ let mouse = {
   hold: false,
 };
 
+export let updateLoop_count = 0;
+export let updateLoop_curLifeRound = 0;
 export function updateLoop(self) {
-  if ("$deleted" in self && self.$deleted) return;
+  if ("updateLoop_myLifeRound" in self) {
+    if (self.updateLoop_myLifeRound < updateLoop_curLifeRound)
+      Reflect.defineProperty(self, "$deleted", {
+        value: true,
+        enumerable: true,
+      });
+  } else {
+    Reflect.defineProperty(self, "updateLoop_myLifeRound", {
+      value: updateLoop_curLifeRound,
+      enumerable: true,
+    });
+  }
+  if ("$deleted" in self && self.$deleted) {
+    if ("delete" in self) self.delete();
+    return;
+  }
+  updateLoop_count++;
   setTimeout(() => {
     self.update();
   }, frameT);
@@ -242,6 +248,7 @@ export function DelegationHandler(delegaionNames) {
       if (prop in target) return Reflect.set(target, prop, value);
       else {
         for (let name of delegaionNames) {
+          if (target[name] == undefined || target[name] == null) continue;
           if (
             (isProxy(target[name]) || prop in target[name]) &&
             Reflect.set(target[name], prop, value)
@@ -1176,7 +1183,8 @@ export class pack_text {
   }
   update() {
     if (this.$deleted) return;
-    this.packBasic.svgObj.textContent = this.text.val;
+    Reflect.set(this.packBasic.svgObj, "textContent", this.text.val);
+    // this.packBasic.svgObj.textContent = this.text.val;
     updateLoop(this);
   }
 }
@@ -1656,20 +1664,21 @@ window.addEventListener("mouseup", function (event) {
   mouse.hold = false;
 });
 
-// window.addEventListener("keydown", function (event) {
-//   // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
-//   if (event.code === "Space" || event.key === " ") {
-//     console.log("空白鍵被按下！");
-//     s1.width.val += 1;
-//     myArray.rad._val += Math.PI / 45;
-//     // let i = myPoints.length - 1;
-//     // let bound = new pack_line(myPoints[i - 1], myPoints[i]);
-//     // myGravity.append(myPoints[i]);
-
-//     // 防止預設行為，例如捲動頁面
-//     event.preventDefault();
-//   }
-// });
+window.addEventListener("keydown", function (event) {
+  // 檢查是否按下空白鍵（空白鍵的 key 是 " " 或 keyCode 是 32）
+  if (event.code === "Space" || event.key === " ") {
+    // updateLoop_curLifeRound++;
+    // setTimeout(() => {
+    //   let a = new pack_circle(
+    //     new Coordinate2d(50, 50),
+    //     20,
+    //     updateLoop_curLifeRound
+    //   );
+    // }, 10);
+    // 防止預設行為，例如捲動頁面
+    // event.preventDefault();
+  }
+});
 
 // objUpdateList = [];
 
@@ -1678,6 +1687,8 @@ sortByLayer();
 
 export function update() {
   updateTime();
+  // console.log(updateLoop_count);
+  updateLoop_count = 0;
 
   if (svg_layerSortTrigger) {
     sortByLayer();
@@ -1832,7 +1843,10 @@ export class pack_segTree {
 
 // let demo_c1 = new pack_circle();
 // let demo_c2 = new pack_circle();
-let demo_c1 = new pack_circle({ x: 100, y: 200 }, 20, "1");
+// let demo_c1 = new pack_circle({ x: 100, y: 200 }, 20, "1");
+// let demo_s1 = new pack_square(100, 100);
+// let demo_a1 = new pack_array(demo_s1.pos);
+// demo_a1[132] = 123;
 // let demo_c2 = new pack_circle({ x: 100, y: 200 }, 20, "2");
 // let demo_l1 = new pack_line(demo_c1, demo_c2, false, true);
 // demo_l1.mark._val = true;
