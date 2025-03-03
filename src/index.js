@@ -80,7 +80,7 @@ function splitCodeSafely(code) {
           buffer += char;
       }
       // ✅ 其他代码按 `;` 分割
-      else if (char === ";" || char === "\n" ||char === "{" ||char =="}") {
+      else if (char === ";") {
           lines.push(buffer.trim() + char); // 还原代码
           buffer = ""; // 清空缓冲区
       } else {
