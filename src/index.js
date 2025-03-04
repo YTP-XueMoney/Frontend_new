@@ -60,8 +60,42 @@ async function executeCode() {
     return;
   }
 
-  
-  let asyncCode = `(async () => { ${code} })()`;
+  let safeLines = splitCodeSafely(code);
+  let processedLines = [];
+  let insideForBody = false; // 是否在 `{}` 代码块内
+  let i=0;
+  let isafter=0;
+safeLines.forEach((line, index) => {
+    let trimmedLine = line.trim();
+    console.log(`/${i+1} + ${line}/`);
+    if(line.includes("\n"))
+      i++;
+    console.log("line add");
+    if (trimmedLine === "" || trimmedLine.startsWith("//")){
+      processedLines.push(trimmedLine);
+      return;
+    }
+    
+    // ✅ `for(;;)` 本身不插入 `highlightLine()`
+    if (trimmedLine.startsWith("for")) {
+        processedLines.push(trimmedLine);
+        insideForBody = true; // **即将进入 `{}` 代码块**
+        return;
+    }
+    processedLines.push(trimmedLine);
+    // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
+    if(trimmedLine[trimmedLine.length-1]===";"){
+      processedLines.push(`
+highlightLine(${i});
+console.log("Executing line ${i}");
+      `);
+    }
+
+    
+});
+      
+  console.log(processedLines.join("\n"));
+  let asyncCode = `(async () => { ${processedLines.join("\n")} })()`;
   console.log(asyncCode);
   try {
     await eval(asyncCode);
