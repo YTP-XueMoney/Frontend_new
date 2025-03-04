@@ -4,6 +4,22 @@ import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
+function highlightLine(lineNumber) {
+  if (!window.code_monaco) return; // 确保 Monaco Editor 存在
+  if (!window.decorations) {
+    window.decorations = window.code_monaco.createDecorationsCollection([]);
+  }
+  // 移除旧的高亮，并添加新的高亮
+  window.decorations.set([
+    {
+      range: new monaco.Range(lineNumber + 1, 1, lineNumber + 1, 1), // 高亮当前行
+      options: {
+        isWholeLine: true,
+        className: "myLineDecoration", // ✅ 使用行高亮样式
+      },
+    },
+  ]);
+}
 function splitCodeSafely(code) {
   let lines = [];
   let buffer = "";
