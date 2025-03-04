@@ -140,11 +140,8 @@ async function executeCode() {
 safeLines.forEach((line, index) => {
     let trimmedLine = line.trim();
     console.log(`/${i+1} + ${line}/`);
-    if(isafter){
-      isafter=0;
-      return;
-    }
-    i++;
+    if(line.includes("\n"))
+      i++;
     console.log("line add");
     if (trimmedLine === "" || trimmedLine.startsWith("//")){
       processedLines.push(trimmedLine);
@@ -161,10 +158,9 @@ safeLines.forEach((line, index) => {
     // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
     if(trimmedLine[trimmedLine.length-1]===";"){
       processedLines.push(`
-highlightLine(${i-1});
+highlightLine(${i});
 console.log("Executing line ${i}");
       `);
-        isafter=1;
     }
 
     
