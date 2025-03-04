@@ -157,18 +157,15 @@ safeLines.forEach((line, index) => {
     processedLines.push(trimmedLine);
     // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
     if(trimmedLine[trimmedLine.length-1]===";"){
-      processedLines.push(`
-highlightLine(${i});
-console.log("Executing line ${i}");
-      `);
+      processedLines.push(`highlightLine(${i});\nconsole.log(\"Executing line ${i}\");`);
     }
 
     
 });
       
   //console.log(processedLines.join("\n"));
-  let asyncCode = `(async () => { ${processedLines.join("\n")} })()`;
-  //console.log(asyncCode);
+  let asyncCode = `(async () => {\n${processedLines.join("\n")}\n})()`;
+  console.log(asyncCode);
   try {
     await eval(asyncCode);
   } catch (error) {
