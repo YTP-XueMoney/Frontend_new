@@ -139,10 +139,10 @@ async function executeCode() {
   let isafter=0;
 safeLines.forEach((line, index) => {
     let trimmedLine = line.trim();
-    console.log(`/${i+1} + ${line}/`);
+    //console.log(`/${i+1} + ${line}/`);
     if(line.includes("\n"))
       i++;
-    console.log("line add");
+    //console.log("line add");
     if (trimmedLine === "" || trimmedLine.startsWith("//")){
       processedLines.push(trimmedLine);
       return;
@@ -166,9 +166,9 @@ console.log("Executing line ${i}");
     
 });
       
-  console.log(processedLines.join("\n"));
+  //console.log(processedLines.join("\n"));
   let asyncCode = `(async () => { ${processedLines.join("\n")} })()`;
-  console.log(asyncCode);
+  //console.log(asyncCode);
   try {
     await eval(asyncCode);
   } catch (error) {
