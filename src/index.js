@@ -4,6 +4,62 @@ import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
+function splitCodeSafely(code) {
+  let lines = [];
+  let buffer = "";
+  let insideForLoop = false;
+  let parenDepth = 0;
+  let insideForBody = false; // 用于检测 `{}` 代码块
+
+  for (let i = 0; i < code.length; i++) {
+      let char = code[i];
+
+      // ✅ 遇到 "for("，开始保护 `for(;;)` 结构
+      if (!insideForLoop && code.slice(i, i + 3) === "for") {
+          insideForLoop = true;
+          parenDepth = 1; // 追踪括号深度
+      }
+
+      // ✅ `for(;;)` 内 `()` 括号匹配
+      if (insideForLoop) {
+          if (char === "(") parenDepth++;
+          if (char === ")") parenDepth--;
+
+          // ✅ `for(;;)` 结束
+          if (parenDepth === 0) {
+              insideForLoop = false;
+              insideForBody = true; // **即将进入 `{}` 代码块**
+          }
+      }
+
+      // ✅ 追踪 `for` 代码块 `{}` 深度
+      if (insideForBody) {
+          if (char === "{") parenDepth++;
+          if (char === "}") parenDepth--;
+
+          // ✅ `for` 代码块结束
+          if (parenDepth === 0) {
+              insideForBody = false;
+          }
+      }
+
+      // ✅ `for(;;)` 内的 `;` 不拆分
+      if (char === ";" && insideForLoop && parenDepth===2) {
+          buffer += char;
+      }
+      // ✅ 其他代码按 `;` 分割
+      else if (char === ";" || char =="\n" || char =="\r") {
+          lines.push(buffer.trim() + char); // 还原代码
+          buffer = ""; // 清空缓冲区
+      } else {
+          buffer += char;
+      }
+  }
+
+  if (buffer.trim()) lines.push(buffer.trim()); // 添加剩余代码
+
+  return lines;
+}
 function step() {
   return new Promise((resolve) => {
     document.getElementById("confirmButton").addEventListener("click", () => {
