@@ -4,6 +4,8 @@ import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
+let isfinish=0;
+
 function highlightLine(lineNumber) {
   if (!window.code_monaco) return; // 确保 Monaco Editor 存在
   if (!window.decorations) {
@@ -136,7 +138,7 @@ async function executeCode() {
   let processedLines = [];
   let insideForBody = false; // 是否在 `{}` 代码块内
   let i=0;
-  let isafter=0;
+  
 safeLines.forEach((line, index) => {
     let trimmedLine = line.trim();
     //console.log(`/${i+1} + ${line}/`);
@@ -157,9 +159,9 @@ safeLines.forEach((line, index) => {
     processedLines.push(trimmedLine);
     // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
     if(trimmedLine[trimmedLine.length-1]===";"){
-      processedLines.push(`highlightLine(${i});\nconsole.log(\"Executing line ${i}\");`);
+      processedLines.push(`highlightLine(${i});\nconsole.log(\"Executing line ${i}\");\nif(isfinish)eval("process.exit(0)");`);
     }
-
+    //
     
 });
       
@@ -201,8 +203,14 @@ window.onload = () => {
     lineDecorationsWidth: 5, // 移除行裝飾欄位
     lineNumbersMinChars: 0, // 確保行數欄位不佔空間
   });
+  document.getElementById("stop").addEventListener("click", () => {
+    isfinish = 1;
+    console.log("🚀 按钮已点击，isFinish =", isfinish);
+    document.getElementById("confirmButton").click(); // 模拟点击
 
+  });
   document.querySelector("#run").addEventListener("click", () => {
+    isfinish = 0;
     const runcode = window.code_monaco.getValue();
     ani_lines = [];
     window.output_area.querySelector("#output-txt").innerHTML = "";
