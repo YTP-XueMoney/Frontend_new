@@ -4,7 +4,7 @@ import * as monaco from "monaco-editor";
 import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
-let isfinish=0;
+let isfinish = 0;
 
 function highlightLine(lineNumber) {
   if (!window.code_monaco) return; // 确保 Monaco Editor 存在
@@ -30,48 +30,48 @@ function splitCodeSafely(code) {
   let insideForBody = false; // 用于检测 `{}` 代码块
 
   for (let i = 0; i < code.length; i++) {
-      let char = code[i];
+    let char = code[i];
 
-      // ✅ 遇到 "for("，开始保护 `for(;;)` 结构
-      if (!insideForLoop && code.slice(i, i + 3) === "for") {
-          insideForLoop = true;
-          parenDepth = 1; // 追踪括号深度
+    // ✅ 遇到 "for("，开始保护 `for(;;)` 结构
+    if (!insideForLoop && code.slice(i, i + 3) === "for") {
+      insideForLoop = true;
+      parenDepth = 1; // 追踪括号深度
+    }
+
+    // ✅ `for(;;)` 内 `()` 括号匹配
+    if (insideForLoop) {
+      if (char === "(") parenDepth++;
+      if (char === ")") parenDepth--;
+
+      // ✅ `for(;;)` 结束
+      if (parenDepth === 0) {
+        insideForLoop = false;
+        insideForBody = true; // **即将进入 `{}` 代码块**
       }
+    }
 
-      // ✅ `for(;;)` 内 `()` 括号匹配
-      if (insideForLoop) {
-          if (char === "(") parenDepth++;
-          if (char === ")") parenDepth--;
+    // ✅ 追踪 `for` 代码块 `{}` 深度
+    if (insideForBody) {
+      if (char === "{") parenDepth++;
+      if (char === "}") parenDepth--;
 
-          // ✅ `for(;;)` 结束
-          if (parenDepth === 0) {
-              insideForLoop = false;
-              insideForBody = true; // **即将进入 `{}` 代码块**
-          }
+      // ✅ `for` 代码块结束
+      if (parenDepth === 0) {
+        insideForBody = false;
       }
+    }
 
-      // ✅ 追踪 `for` 代码块 `{}` 深度
-      if (insideForBody) {
-          if (char === "{") parenDepth++;
-          if (char === "}") parenDepth--;
-
-          // ✅ `for` 代码块结束
-          if (parenDepth === 0) {
-              insideForBody = false;
-          }
-      }
-
-      // ✅ `for(;;)` 内的 `;` 不拆分
-      if (char === ";" && insideForLoop && parenDepth===2) {
-          buffer += char;
-      }
-      // ✅ 其他代码按 `;` 分割
-      else if (char === ";" || char =="\n" || char =="\r") {
-          lines.push(buffer.trim() + char); // 还原代码
-          buffer = ""; // 清空缓冲区
-      } else {
-          buffer += char;
-      }
+    // ✅ `for(;;)` 内的 `;` 不拆分
+    if (char === ";" && insideForLoop && parenDepth === 2) {
+      buffer += char;
+    }
+    // ✅ 其他代码按 `;` 分割
+    else if (char === ";" || char == "\n" || char == "\r") {
+      lines.push(buffer.trim() + char); // 还原代码
+      buffer = ""; // 清空缓冲区
+    } else {
+      buffer += char;
+    }
   }
 
   if (buffer.trim()) lines.push(buffer.trim()); // 添加剩余代码
@@ -110,8 +110,6 @@ function wait(ms) {
 // 存储 Monaco 高亮的装饰器
 // 存储 Monaco 高亮的装饰器
 
-
-
 async function executeCode() {
   console.log("hamster run code");
 
@@ -137,34 +135,34 @@ async function executeCode() {
   let safeLines = splitCodeSafely(code);
   let processedLines = [];
   let insideForBody = false; // 是否在 `{}` 代码块内
-  let i=0;
-  
-safeLines.forEach((line, index) => {
+  let i = 0;
+
+  safeLines.forEach((line, index) => {
     let trimmedLine = line.trim();
     //console.log(`/${i+1} + ${line}/`);
-    if(line.includes("\n"))
-      i++;
+    if (line.includes("\n")) i++;
     //console.log("line add");
-    if (trimmedLine === "" || trimmedLine.startsWith("//")){
+    if (trimmedLine === "" || trimmedLine.startsWith("//")) {
       processedLines.push(trimmedLine);
       return;
     }
-    
+
     // ✅ `for(;;)` 本身不插入 `highlightLine()`
     if (trimmedLine.startsWith("for")) {
-        processedLines.push(trimmedLine);
-        insideForBody = true; // **即将进入 `{}` 代码块**
-        return;
+      processedLines.push(trimmedLine);
+      insideForBody = true; // **即将进入 `{}` 代码块**
+      return;
     }
     processedLines.push(trimmedLine);
     // ✅ 插入 `highlightLine()`，即使代码在 `for` 代码块 `{}` 里
-    if(trimmedLine[trimmedLine.length-1]===";"){
-      processedLines.push(`highlightLine(${i});\nconsole.log(\"Executing line ${i}\");\nif(isfinish)eval("process.exit(0)");`);
+    if (trimmedLine[trimmedLine.length - 1] === ";") {
+      processedLines.push(
+        `highlightLine(${i});\nconsole.log(\"Executing line ${i}\");\nif(isfinish)eval("process.exit(0)");`
+      );
     }
     //
-    
-});
-      
+  });
+
   //console.log(processedLines.join("\n"));
   let asyncCode = `(async () => {\n${processedLines.join("\n")}\n})()`;
   console.log(asyncCode);
@@ -207,7 +205,6 @@ window.onload = () => {
     isfinish = 1;
     console.log("🚀 按钮已点击，isFinish =", isfinish);
     document.getElementById("confirmButton").click(); // 模拟点击
-
   });
   document.querySelector("#run").addEventListener("click", () => {
     isfinish = 0;
@@ -428,6 +425,7 @@ export class refer {
   constructor(getFunc, setFunc = null) {
     this.getFunc = getFunc;
     this.setFunc = setFunc;
+    return Delegation(this, ["val"]);
   }
   get val() {
     // return this.getFunc();
@@ -777,14 +775,14 @@ export class obj_bound {
   }
   update() {
     if (this.$deleted) return;
-
+    
     let obj1 = this.obj1;
     let obj2 = this.obj2;
     let pos1 = obj1.pos;
     let pos2 = obj2.pos;
     // console.log(obj1);
     // console.log(obj2);
-
+    
     let posVector = new Coordinate2d(pos2.x - pos1.x, pos2.y - pos1.y);
     let d = posVector.len();
     posVector = Coordinate2d.unit(posVector);
@@ -795,10 +793,10 @@ export class obj_bound {
       pos1.y.val -= (posVector.y.val * move) / 2;
       pos2.x.val += (posVector.x.val * move) / 2;
       pos2.y.val += (posVector.y.val * move) / 2;
-      obj1.dot.velocity.x.val *= 0.5;
-      obj1.dot.velocity.y.val *= 0.5;
-      obj2.dot.velocity.x.val *= 0.5;
-      obj2.dot.velocity.y.val *= 0.5;
+      // obj1.dot.velocity.x.val *= 0.5;
+      // obj1.dot.velocity.y.val *= 0.5;
+      // obj2.dot.velocity.x.val *= 0.5;
+      // obj2.dot.velocity.y.val *= 0.5;
     }
     if (d > this.maxr) {
       let move = Math.min(d - this.maxr, this.k * time.delta);
@@ -807,10 +805,10 @@ export class obj_bound {
       pos1.y.val += (posVector.y.val * move) / 2;
       pos2.x.val -= (posVector.x.val * move) / 2;
       pos2.y.val -= (posVector.y.val * move) / 2;
-      obj1.dot.velocity.x.val *= 0.5;
-      obj1.dot.velocity.y.val *= 0.5;
-      obj2.dot.velocity.x.val *= 0.5;
-      obj2.dot.velocity.y.val *= 0.5;
+      // obj1.dot.velocity.x.val *= 0.5;
+      // obj1.dot.velocity.y.val *= 0.5;
+      // obj2.dot.velocity.x.val *= 0.5;
+      // obj2.dot.velocity.y.val *= 0.5;
     }
     updateLoop(this);
   }
