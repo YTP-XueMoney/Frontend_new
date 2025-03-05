@@ -775,14 +775,14 @@ export class obj_bound {
   }
   update() {
     if (this.$deleted) return;
-    
+
     let obj1 = this.obj1;
     let obj2 = this.obj2;
     let pos1 = obj1.pos;
     let pos2 = obj2.pos;
     // console.log(obj1);
     // console.log(obj2);
-    
+
     let posVector = new Coordinate2d(pos2.x - pos1.x, pos2.y - pos1.y);
     let d = posVector.len();
     posVector = Coordinate2d.unit(posVector);
@@ -1410,7 +1410,11 @@ export class pack_array {
   size = 0;
   $deleted = false;
   hide = new pointer(false);
-  constructor(pos, gap = new pointer(50), rad = new pointer(0)) {
+  constructor(
+    pos = new Coordinate2d(50, 50),
+    gap = new pointer(50),
+    rad = new pointer(0)
+  ) {
     this.pos._val = pos;
     this.gap._val = gap;
     this.rad._val = rad;
