@@ -1448,7 +1448,7 @@ export class pack_array {
     },
   });
   boxArray = [];
-  maxIndex = -2;
+  maxIndex = -1;
   posGetter(index) {
     let xy = rotateMatrix(
       this.pos.x + (index + 1) * this.gap,
@@ -1488,9 +1488,9 @@ export class pack_array {
     }
   }
   coord(index, adjustSize = true) {
-    while (this.maxIndex < index) {
-      this.$increaseSize();
-    }
+    // while (this.maxIndex < index) {
+    //   this.$increaseSize();
+    // }
     return new refer(
       function () {
         return this.posGetter(index);
