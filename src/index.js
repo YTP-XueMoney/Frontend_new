@@ -1393,6 +1393,7 @@ export class pack_line {
     this.$deleted = true;
     this.packBasic.delete();
     this.bound.delete();
+    if (this.arrow._val != null) this.arrow.delete();
   }
 
   update() {
