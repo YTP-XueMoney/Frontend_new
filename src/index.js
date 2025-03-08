@@ -1381,6 +1381,8 @@ export class pack_line {
 
     this.packBasic.markStroke._val = "red";
 
+    this.text.hide._val = this.hide;
+
     this.update();
     return Delegation(this, ["packBasic", "packText"]);
   }
