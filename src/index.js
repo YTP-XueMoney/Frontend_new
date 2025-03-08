@@ -96,6 +96,9 @@ const input = () => {
 const print = (str) => {
   output_area.querySelector("#output-txt").innerHTML += str;
 };
+if (false) {
+  print("This keeps print function from being removed.");
+}
 let ani_lines = [];
 function isProxy(obj) {
   if (typeof obj != "object") return false;
@@ -210,6 +213,7 @@ window.onload = () => {
 
   });
   document.querySelector("#run").addEventListener("click", () => {
+    document.getElementById("stop").click(); // 模拟点击
     isfinish = 0;
     const runcode = window.code_monaco.getValue();
     ani_lines = [];
