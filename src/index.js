@@ -1256,6 +1256,9 @@ export class pack_text {
     this.text._val = val;
   }
   valueOf() {
+    return parseInt(this.text.val);
+  }
+  toString() {
     return this.text.val;
   }
   delete() {
@@ -1433,6 +1436,8 @@ export class pack_array {
       else return undefined;
     },
     set: (target, prop, value) => {
+      console.log(prop);
+      console.log(Number(prop));
       if (!isNaN(Number(prop))) {
         {
           let tarArray = target._defaultArray;
