@@ -307,7 +307,7 @@ export function updateLoop(self) {
 
 export function DelegationHandler(delegaionNames) {
   return {
-    get(target, prop, receiver) {
+    get(target, prop) {
       //  can't find a better way to determine if an object is a proxy
       //  there's node: util.types.isProxy but it's not available in browser
       if (prop == "isProxy") return true;
@@ -408,12 +408,15 @@ export class pointer {
 
   [Symbol.toPrimitive](hint) {
     if (hint === "number") {
-      // console.log(this.valueOf());
+      console.log("number");
       return this.valueOf();
     }
     if (hint === "string") {
-      return toString(this.valueOf());
+      console.log("string");
+      return String(this.valueOf());
+      // return toString(this.valueOf());
     }
+    console.log("no hint");
     return this.valueOf();
   }
 }
