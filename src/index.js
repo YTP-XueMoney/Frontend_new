@@ -408,15 +408,12 @@ export class pointer {
 
   [Symbol.toPrimitive](hint) {
     if (hint === "number") {
-      console.log("number");
       return this.valueOf();
     }
     if (hint === "string") {
-      console.log("string");
       return String(this.valueOf());
       // return toString(this.valueOf());
     }
-    console.log("no hint");
     return this.valueOf();
   }
 }
@@ -1384,7 +1381,7 @@ export class pack_line {
 
     this.packBasic.markStroke._val = "red";
 
-    this.text.hide._val = this.hide;
+    this.packText.hide._val = this.packBasic.hide;
 
     this.update();
     return Delegation(this, ["packBasic", "packText"]);
@@ -1441,8 +1438,6 @@ export class pack_array {
       else return undefined;
     },
     set: (target, prop, value) => {
-      console.log(prop);
-      console.log(Number(prop));
       if (!isNaN(Number(prop))) {
         {
           let tarArray = target._defaultArray;
