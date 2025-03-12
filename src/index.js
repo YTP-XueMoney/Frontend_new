@@ -5,7 +5,11 @@ import { rotateMatrix } from "./tools.js";
 let inputBuffer = [];
 let currentIndex = 0;
 let isfinish = 0;
-
+self.MonacoEnvironment = {
+  getWorkerUrl: function (moduleId, label) {
+    return './assets/worker.js';
+  }
+};
 function highlightLine(lineNumber) {
   if (!window.code_monaco) return; // 确保 Monaco Editor 存在
   if (!window.decorations) {
@@ -177,6 +181,7 @@ async function executeCode() {
 }
 
 window.onload = () => {
+  
   const code_editor = document.getElementById("code-editor");
   const input_area = document.getElementById("input-area");
   window.output_area = document.getElementById("output-area");
@@ -432,15 +437,22 @@ export class refer {
     return Delegation(this, ["val"]);
   }
   get val() {
-    // return this.getFunc();
-    let ret = new pointer(this.getFunc());
+    if (typeof this.getFunc !== "function") {
+      console.error("⚠️ Error: getFunc is not a function!", this);
+      return new pointer(null); // 或者 return 0
+    }
+
+    let result = this.getFunc();
+    if (result === undefined) {
+      console.error("⚠️ Error: getFunc() returned undefined!", this);
+      return new pointer(null);
+    }
+
+    let ret = new pointer(result);
     return ret.val;
   }
   set val(val) {
-    //  nothing happen right now
     if (this.setFunc != null) this.setFunc(val);
-    // else console.error("this refer has no set/reverse funuction");
-    // console.log("tried to change a refer val");
   }
   valueOf() {
     return this.val;
