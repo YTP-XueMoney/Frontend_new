@@ -316,7 +316,7 @@ export function updateLoop(self) {
 
 export function DelegationHandler(delegaionNames) {
   return {
-    get(target, prop, receiver) {
+    get(target, prop) {
       //  can't find a better way to determine if an object is a proxy
       //  there's node: util.types.isProxy but it's not available in browser
       if (prop == "isProxy") return true;
@@ -417,11 +417,11 @@ export class pointer {
 
   [Symbol.toPrimitive](hint) {
     if (hint === "number") {
-      // console.log(this.valueOf());
       return this.valueOf();
     }
     if (hint === "string") {
-      return toString(this.valueOf());
+      return String(this.valueOf());
+      // return toString(this.valueOf());
     }
     return this.valueOf();
   }
@@ -1397,6 +1397,8 @@ export class pack_line {
 
     this.packBasic.markStroke._val = "red";
 
+    this.packText.hide._val = this.packBasic.hide;
+
     this.update();
     return Delegation(this, ["packBasic", "packText"]);
   }
@@ -1452,8 +1454,6 @@ export class pack_array {
       else return undefined;
     },
     set: (target, prop, value) => {
-      console.log(prop);
-      console.log(Number(prop));
       if (!isNaN(Number(prop))) {
         {
           let tarArray = target._defaultArray;
